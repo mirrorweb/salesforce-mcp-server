@@ -1,70 +1,290 @@
-# salesforce-mcp-server MCP Server
+# Salesforce MCP Server
 
-A Model Context Protocol server for Salesforce integration using jsforce.
+A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools like Claude Desktop, GitHub Copilot, and other MCP-compatible clients.
 
-This is a TypeScript-based MCP server that implements a simple notes system. It demonstrates core MCP concepts by providing:
+## 🚀 Features
 
-- Resources representing text notes with URIs and metadata
-- Tools for creating new notes
-- Prompts for generating summaries of notes
+### 15 Comprehensive Tools
 
-## Features
+#### 🔍 Query & Search Tools
+- **`execute-soql`** - Execute SOQL queries with auto-bulk switching and pagination
+- **`execute-sosl`** - Multi-object search with result aggregation
+- **`describe-sobject`** - SObject metadata with intelligent caching
 
-### Resources
-- List and access notes via `note://` URIs
-- Each note has a title, content and metadata
-- Plain text mime type for simple content access
+#### ⚡ Apex Development Tools
+- **`execute-apex`** - Anonymous Apex execution with debug log capture
+- **`run-apex-tests`** - Apex test execution with coverage reporting
+- **`get-apex-logs`** - Debug log retrieval with filtering
 
-### Tools
-- `create_note` - Create new text notes
-  - Takes title and content as required parameters
-  - Stores note in server state
+#### 📊 Data Management Tools
+- **`create-record`** - Single/bulk record creation with auto-bulk switching
+- **`get-record`** - Record retrieval with field selection
+- **`update-record`** - Single/bulk record updates with validation
+- **`delete-record`** - Single/bulk record deletion
+- **`upsert-record`** - External ID-based upsert operations
 
-### Prompts
-- `summarize_notes` - Generate a summary of all stored notes
-  - Includes all note contents as embedded resources
-  - Returns structured prompt for LLM summarization
+#### 🔧 Metadata Tools
+- **`list-metadata-types`** - Discover 223+ metadata types
+- **`deploy-metadata`** - Metadata deployment with validation
+- **`retrieve-metadata`** - ⚠️ Currently disabled (see [Known Limitations](#known-limitations))
 
-## Development
+#### 🔗 Connection Tools
+- **`test-connection`** - Connection validation and health monitoring
 
-Install dependencies:
+### Key Capabilities
+
+- **🔄 Auto-Bulk Switching** - Intelligent API selection for optimal performance
+- **🔐 Dual Authentication** - OAuth2 and Username/Password support
+- **⚡ Smart Caching** - 1-hour TTL for SObject metadata
+- **🛡️ Type Safety** - Full TypeScript implementation with runtime validation
+- **📝 Comprehensive Logging** - Detailed debugging and monitoring
+- **🔍 Raw Error Exposure** - Preserve exact Salesforce errors for debugging
+
+## 🚀 Quick Start
+
+### Installation
+
 ```bash
+# Clone the repository
+git clone https://github.com/your-username/salesforce-mcp-server.git
+cd salesforce-mcp-server
+
+# Install dependencies
 npm install
-```
 
-Build the server:
-```bash
+# Build the project
 npm run build
 ```
 
-For development with auto-rebuild:
+### Environment Setup
+
+Create a `.env` file with your Salesforce credentials:
+
 ```bash
-npm run watch
+# Option 1: Username/Password Authentication (Recommended for development)
+SF_USERNAME=your-username@company.com
+SF_PASSWORD=your-password
+SF_SECURITY_TOKEN=your-security-token
+SF_LOGIN_URL=https://login.salesforce.com
+
+# Option 2: OAuth2 Authentication (Recommended for production)
+SF_CLIENT_ID=your-oauth2-client-id
+SF_CLIENT_SECRET=your-oauth2-client-secret
+SF_REFRESH_TOKEN=your-refresh-token
+SF_INSTANCE_URL=https://yourorg.my.salesforce.com
+
+# Optional Configuration
+SF_API_VERSION=63.0
 ```
 
-## Installation
+## 🔧 Claude Desktop Configuration
 
-To use with Claude Desktop, add the server config:
+Add the following to your Claude Desktop MCP settings file:
 
-On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+### Windows
+Location: `%APPDATA%\Claude\claude_desktop_config.json`
+
+### macOS
+Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+### Configuration
 
 ```json
 {
   "mcpServers": {
-    "salesforce-mcp-server": {
-      "command": "/path/to/salesforce-mcp-server/build/index.js"
+    "salesforce": {
+      "command": "node",
+      "args": ["path/to/salesforce-mcp-server/build/index.js"],
+      "env": {
+        "SF_USERNAME": "your-username@company.com",
+        "SF_PASSWORD": "your-password",
+        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_LOGIN_URL": "https://login.salesforce.com",
+        "SF_API_VERSION": "63.0"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject"
+      ]
     }
   }
 }
 ```
 
-### Debugging
+### OAuth2 Configuration (Alternative)
 
-Since MCP servers communicate over stdio, debugging can be challenging. We recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector), which is available as a package script:
-
-```bash
-npm run inspector
+```json
+{
+  "mcpServers": {
+    "salesforce": {
+      "command": "node",
+      "args": ["path/to/salesforce-mcp-server/build/index.js"],
+      "env": {
+        "SF_CLIENT_ID": "your-oauth2-client-id",
+        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
+        "SF_REFRESH_TOKEN": "your-refresh-token",
+        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
+      }
+    }
+  }
+}
 ```
 
-The Inspector will provide a URL to access debugging tools in your browser.
+## 📖 Tool Documentation
+
+### Query Tools
+
+#### execute-soql
+Execute SOQL queries with automatic bulk switching for large datasets.
+
+```typescript
+// Example: Query all accounts created today
+{
+  "query": "SELECT Id, Name, CreatedDate FROM Account WHERE CreatedDate = TODAY",
+  "tooling": false,
+  "bulkThreshold": 2000
+}
+```
+
+#### execute-sosl
+Perform multi-object searches across your Salesforce org.
+
+```typescript
+// Example: Search for contacts and leads
+{
+  "searchString": "FIND {John} IN NAME FIELDS RETURNING Contact(Id, Name), Lead(Id, Name)",
+  "searchScope": "NAME"
+}
+```
+
+### Apex Tools
+
+#### execute-apex
+Execute anonymous Apex code with debug log capture.
+
+```typescript
+// Example: Create and insert an account
+{
+  "apexCode": "Account acc = new Account(Name='Test Account'); insert acc; System.debug('Created: ' + acc.Id);",
+  "logLevel": "DEBUG"
+}
+```
+
+#### run-apex-tests
+Run Apex tests with detailed coverage reporting.
+
+```typescript
+// Example: Run specific test classes
+{
+  "testClasses": ["AccountTest", "ContactTest"],
+  "maxFailedTests": 5
+}
+```
+
+### Data Management Tools
+
+#### create-record
+Create single or multiple records with auto-bulk switching.
+
+```typescript
+// Example: Create multiple accounts
+{
+  "sobjectType": "Account",
+  "records": [
+    {"Name": "Company A", "Type": "Customer"},
+    {"Name": "Company B", "Type": "Prospect"}
+  ],
+  "allOrNone": false
+}
+```
+
+### Metadata Tools
+
+#### deploy-metadata
+Deploy metadata packages to your Salesforce org.
+
+```typescript
+// Example: Deploy with validation only
+{
+  "zipData": "UEsDBBQACAgIAB...", // Base64 encoded zip
+  "options": {
+    "checkOnly": true,
+    "rollbackOnError": true,
+    "runTests": ["CustomObjectTest"]
+  }
+}
+```
+
+## 🔐 Authentication
+
+### Username/Password Authentication
+1. Obtain your security token from Salesforce Setup → Personal Information → Reset Security Token
+2. Set environment variables as shown in the configuration section
+3. Use `https://login.salesforce.com` for production or `https://test.salesforce.com` for sandboxes
+
+### OAuth2 Authentication
+1. Create a Connected App in Salesforce Setup
+2. Configure OAuth settings and obtain client credentials
+3. Generate a refresh token using the OAuth2 flow
+4. Set environment variables as shown in the configuration section
+
+## ⚠️ Known Limitations
+
+### retrieve-metadata Tool
+The `retrieve-metadata` tool is currently disabled due to jsforce API compatibility issues. This limitation will be resolved in a future version.
+
+## 🏗️ Architecture
+
+### Core Components
+- **Authentication Manager** - Dual OAuth2/Username-Password support
+- **Connection Manager** - Singleton pattern with health monitoring
+- **Tool Classes** - Organized by functionality (Query, Apex, Data, Metadata)
+- **Error Handler** - Comprehensive error formatting with context
+- **Cache Manager** - TTL-based caching for performance optimization
+
+### Performance Features
+- **Auto-Bulk Switching** - Automatically uses Bulk API for large operations
+- **Intelligent Caching** - SObject metadata cached for 1 hour
+- **Connection Reuse** - Single connection across all operations
+- **Polling Optimization** - Efficient monitoring of long-running operations
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Test individual tools
+node test-tools.js
+node test-metadata-tools.js
+node test-apex-tools.js
+node test-data-tools.js
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Jarosław Jaworski**
+
+## 🤖 Development Credits
+
+Part of this implementation was developed with assistance from Claude Sonnet 4 using the Cline VS Code extension, demonstrating the power of AI-assisted development in creating comprehensive developer tools.
+
+## 🔗 Related Projects
+
+- [Model Context Protocol](https://github.com/modelcontextprotocol) - The protocol this server implements
+- [jsforce](https://github.com/jsforce/jsforce) - Salesforce API library used in this project
+- [Claude Desktop](https://claude.ai/desktop) - AI assistant that supports MCP servers
