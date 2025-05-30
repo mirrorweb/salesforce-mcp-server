@@ -49,7 +49,7 @@ export class DataTools {
       
       console.error('[DataTools] Record(s) created successfully');
       
-      return {
+      const responseData = {
         success: true,
         operation: 'create',
         sobjectType,
@@ -58,10 +58,31 @@ export class DataTools {
         results: result
       };
       
+      const context = SalesforceErrorHandler.createContext('create-record', 'create');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+      
     } catch (error: any) {
       console.error('[DataTools] Create operation failed:', error);
       const context = SalesforceErrorHandler.createContext('create-record', 'create');
-      throw SalesforceErrorHandler.formatError(error, context);
+      
+      // Enhance error for required field issues
+      if (error.message?.includes('REQUIRED_FIELD_MISSING') || 
+          error.message?.includes('required field') ||
+          error.message?.includes('Required fields are missing') ||
+          error.errorCode === 'REQUIRED_FIELD_MISSING') {
+        
+        const enhancedError = {
+          ...error,
+          enhancedMessage: `Missing required fields for ${sobjectType}. Use describe-sobject tool to see all required fields.`,
+          suggestion: `Try: describe-sobject with sobjectType: "${sobjectType}" to see which fields are required`,
+          helpfulTip: "Look for fields where 'nillable' is false and 'defaultedOnCreate' is false",
+          quickFix: `Example: { "sobjectType": "${sobjectType}", "useCache": true }`
+        };
+        
+        return SalesforceErrorHandler.formatError(enhancedError, context);
+      }
+      
+      return SalesforceErrorHandler.formatError(error, context);
     }
   }
   
@@ -93,7 +114,7 @@ export class DataTools {
       
       console.error('[DataTools] Record retrieved successfully');
       
-      return {
+      const responseData = {
         success: true,
         operation: 'retrieve',
         sobjectType,
@@ -102,10 +123,13 @@ export class DataTools {
         record: result
       };
       
+      const context = SalesforceErrorHandler.createContext('get-record', 'retrieve');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+      
     } catch (error: any) {
       console.error('[DataTools] Retrieve operation failed:', error);
       const context = SalesforceErrorHandler.createContext('get-record', 'retrieve');
-      throw SalesforceErrorHandler.formatError(error, context);
+      return SalesforceErrorHandler.formatError(error, context);
     }
   }
   
@@ -157,7 +181,7 @@ export class DataTools {
       
       console.error('[DataTools] Record(s) updated successfully');
       
-      return {
+      const responseData = {
         success: true,
         operation: 'update',
         sobjectType,
@@ -166,10 +190,13 @@ export class DataTools {
         results: result
       };
       
+      const context = SalesforceErrorHandler.createContext('update-record', 'update');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+      
     } catch (error: any) {
       console.error('[DataTools] Update operation failed:', error);
       const context = SalesforceErrorHandler.createContext('update-record', 'update');
-      throw SalesforceErrorHandler.formatError(error, context);
+      return SalesforceErrorHandler.formatError(error, context);
     }
   }
   
@@ -213,7 +240,7 @@ export class DataTools {
       
       console.error('[DataTools] Record(s) deleted successfully');
       
-      return {
+      const responseData = {
         success: true,
         operation: 'delete',
         sobjectType,
@@ -222,10 +249,13 @@ export class DataTools {
         results: result
       };
       
+      const context = SalesforceErrorHandler.createContext('delete-record', 'delete');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+      
     } catch (error: any) {
       console.error('[DataTools] Delete operation failed:', error);
       const context = SalesforceErrorHandler.createContext('delete-record', 'delete');
-      throw SalesforceErrorHandler.formatError(error, context);
+      return SalesforceErrorHandler.formatError(error, context);
     }
   }
   
@@ -271,7 +301,7 @@ export class DataTools {
       
       console.error('[DataTools] Record(s) upserted successfully');
       
-      return {
+      const responseData = {
         success: true,
         operation: 'upsert',
         sobjectType,
@@ -281,10 +311,13 @@ export class DataTools {
         results: result
       };
       
+      const context = SalesforceErrorHandler.createContext('upsert-record', 'upsert');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+      
     } catch (error: any) {
       console.error('[DataTools] Upsert operation failed:', error);
       const context = SalesforceErrorHandler.createContext('upsert-record', 'upsert');
-      throw SalesforceErrorHandler.formatError(error, context);
+      return SalesforceErrorHandler.formatError(error, context);
     }
   }
   
@@ -307,14 +340,17 @@ export class DataTools {
     return new Promise((resolve, reject) => {
       batch.on('response', (results: any) => {
         console.error('[DataTools] Bulk create completed');
-        resolve({
+        const responseData = {
           success: true,
           operation: 'create',
           sobjectType,
           recordCount: records.length,
           usedBulkAPI: true,
           results: results
-        });
+        };
+        
+        const context = SalesforceErrorHandler.createContext('create-record', 'bulk-create');
+        resolve(SalesforceErrorHandler.formatSuccess(responseData, context));
       });
       
       batch.on('error', (error: any) => {
@@ -342,14 +378,17 @@ export class DataTools {
     return new Promise((resolve, reject) => {
       batch.on('response', (results: any) => {
         console.error('[DataTools] Bulk update completed');
-        resolve({
+        const responseData = {
           success: true,
           operation: 'update',
           sobjectType,
           recordCount: records.length,
           usedBulkAPI: true,
           results: results
-        });
+        };
+        
+        const context = SalesforceErrorHandler.createContext('update-record', 'bulk-update');
+        resolve(SalesforceErrorHandler.formatSuccess(responseData, context));
       });
       
       batch.on('error', (error: any) => {
@@ -380,14 +419,17 @@ export class DataTools {
     return new Promise((resolve, reject) => {
       batch.on('response', (results: any) => {
         console.error('[DataTools] Bulk delete completed');
-        resolve({
+        const responseData = {
           success: true,
           operation: 'delete',
           sobjectType,
           recordCount: recordIds.length,
           usedBulkAPI: true,
           results: results
-        });
+        };
+        
+        const context = SalesforceErrorHandler.createContext('delete-record', 'bulk-delete');
+        resolve(SalesforceErrorHandler.formatSuccess(responseData, context));
       });
       
       batch.on('error', (error: any) => {
@@ -416,7 +458,7 @@ export class DataTools {
     return new Promise((resolve, reject) => {
       batch.on('response', (results: any) => {
         console.error('[DataTools] Bulk upsert completed');
-        resolve({
+        const responseData = {
           success: true,
           operation: 'upsert',
           sobjectType,
@@ -424,7 +466,10 @@ export class DataTools {
           recordCount: records.length,
           usedBulkAPI: true,
           results: results
-        });
+        };
+        
+        const context = SalesforceErrorHandler.createContext('upsert-record', 'bulk-upsert');
+        resolve(SalesforceErrorHandler.formatSuccess(responseData, context));
       });
       
       batch.on('error', (error: any) => {
