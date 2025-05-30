@@ -20,6 +20,7 @@ import { SalesforceErrorHandler } from "./utils/errors.js";
 import { QueryTools } from "./tools/queryTools.js";
 import { ApexTools } from "./tools/apexTools.js";
 import { DataTools } from "./tools/dataTools.js";
+import { MetadataTools } from "./tools/metadataTools.js";
 
 /**
  * Create the Salesforce MCP server with comprehensive Salesforce capabilities
@@ -315,6 +316,123 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["sobjectType", "externalIdField", "recordData"]
         }
+      },
+      {
+        name: "deploy-metadata",
+        description: "Deploy metadata to Salesforce org with deployment monitoring",
+        inputSchema: {
+          type: "object",
+          properties: {
+            zipFile: {
+              type: "string",
+              description: "Base64 encoded zip file containing metadata to deploy"
+            },
+            options: {
+              type: "object",
+              properties: {
+                allowMissingFiles: {
+                  type: "boolean",
+                  description: "Allow deployment with missing files"
+                },
+                autoUpdatePackage: {
+                  type: "boolean",
+                  description: "Auto-update package.xml"
+                },
+                checkOnly: {
+                  type: "boolean",
+                  description: "Validate deployment without saving changes"
+                },
+                ignoreWarnings: {
+                  type: "boolean",
+                  description: "Ignore warnings during deployment"
+                },
+                performRetrieve: {
+                  type: "boolean",
+                  description: "Perform retrieve after deployment"
+                },
+                purgeOnDelete: {
+                  type: "boolean",
+                  description: "Purge components on delete"
+                },
+                rollbackOnError: {
+                  type: "boolean",
+                  description: "Rollback all changes on any error"
+                },
+                runTests: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Specific test classes to run"
+                },
+                singlePackage: {
+                  type: "boolean",
+                  description: "Deploy as single package"
+                }
+              }
+            }
+          },
+          required: ["zipFile"]
+        }
+      },
+      {
+        name: "retrieve-metadata",
+        description: "Retrieve metadata from Salesforce org as base64 zip file",
+        inputSchema: {
+          type: "object",
+          properties: {
+            types: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    description: "Metadata type name (e.g., ApexClass, CustomObject)"
+                  },
+                  members: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Specific members to retrieve (use * for all)"
+                  }
+                },
+                required: ["name", "members"]
+              },
+              description: "Metadata types and members to retrieve"
+            },
+            options: {
+              type: "object",
+              properties: {
+                apiVersion: {
+                  type: "string",
+                  description: "API version to use for retrieval"
+                },
+                packageNames: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Specific package names to retrieve"
+                },
+                singlePackage: {
+                  type: "boolean",
+                  description: "Retrieve as single package"
+                }
+              }
+            }
+          },
+          required: ["types"]
+        }
+      },
+      {
+        name: "list-metadata-types",
+        description: "List available metadata types in the org for discovery",
+        inputSchema: {
+          type: "object",
+          properties: {
+            apiVersion: {
+              type: "string",
+              description: "API version to use for listing metadata types"
+            }
+          },
+          required: []
+        }
       }
     ]
   };
@@ -409,6 +527,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await DataTools.upsertRecord(args.sobjectType, args.externalIdField, args.recordData, args.options);
     }
     
+    case "deploy-metadata": {
+      const args = request.params.arguments as { zipFile: string; options?: any };
+      return await MetadataTools.deployMetadata(args.zipFile, args.options);
+    }
+    
+    case "retrieve-metadata": {
+      const args = request.params.arguments as { types: Array<{ name: string; members: string[] }>; options?: any };
+      return await MetadataTools.retrieveMetadata(args.types, args.options);
+    }
+    
+    case "list-metadata-types": {
+      const args = request.params.arguments as { apiVersion?: string };
+      return await MetadataTools.listMetadataTypes(args.apiVersion);
+    }
+    
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);
   }
@@ -431,7 +564,7 @@ async function main() {
     await server.connect(transport);
     
     console.error('[Salesforce MCP Server] Server started successfully');
-    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs, create-record, get-record, update-record, delete-record, upsert-record');
+    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs, create-record, get-record, update-record, delete-record, upsert-record, deploy-metadata, retrieve-metadata, list-metadata-types');
     
   } catch (error) {
     console.error('[Salesforce MCP Server] Failed to start server:', error);
