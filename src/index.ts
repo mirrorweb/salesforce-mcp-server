@@ -17,6 +17,7 @@ import {
 import { validateConfig } from "./config/environment.js";
 import { ConnectionManager } from "./utils/connection.js";
 import { SalesforceErrorHandler } from "./utils/errors.js";
+import { QueryTools } from "./tools/queryTools.js";
 
 /**
  * Create the Salesforce MCP server with comprehensive Salesforce capabilities
@@ -46,6 +47,56 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {},
           required: []
+        }
+      },
+      {
+        name: "execute-soql",
+        description: "Execute SOQL query with auto-bulk switching for large result sets",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "SOQL query to execute"
+            },
+            useBulk: {
+              type: "boolean",
+              description: "Force use of bulk API (optional, auto-detected by default)"
+            }
+          },
+          required: ["query"]
+        }
+      },
+      {
+        name: "execute-sosl",
+        description: "Execute SOSL search with multi-object support",
+        inputSchema: {
+          type: "object",
+          properties: {
+            searchQuery: {
+              type: "string",
+              description: "SOSL search query to execute"
+            }
+          },
+          required: ["searchQuery"]
+        }
+      },
+      {
+        name: "describe-sobject",
+        description: "Describe SObject metadata with 1-hour caching",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            useCache: {
+              type: "boolean",
+              description: "Use cached metadata if available (default: true)"
+            }
+          },
+          required: ["sobjectType"]
         }
       }
     ]
@@ -86,6 +137,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
     
+    case "execute-soql": {
+      const args = request.params.arguments as { query: string; useBulk?: boolean };
+      return await QueryTools.executeSoql(args.query, args.useBulk);
+    }
+    
+    case "execute-sosl": {
+      const args = request.params.arguments as { searchQuery: string };
+      return await QueryTools.executeSosl(args.searchQuery);
+    }
+    
+    case "describe-sobject": {
+      const args = request.params.arguments as { sobjectType: string; useCache?: boolean };
+      return await QueryTools.describeSObject(args.sobjectType, args.useCache);
+    }
+    
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);
   }
@@ -108,7 +174,7 @@ async function main() {
     await server.connect(transport);
     
     console.error('[Salesforce MCP Server] Server started successfully');
-    console.error('[Salesforce MCP Server] Available tools: test-connection');
+    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject');
     
   } catch (error) {
     console.error('[Salesforce MCP Server] Failed to start server:', error);

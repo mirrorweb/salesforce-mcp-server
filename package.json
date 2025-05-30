@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "dotenv": "^16.5.0",
