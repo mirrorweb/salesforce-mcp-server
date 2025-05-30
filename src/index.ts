@@ -19,6 +19,7 @@ import { ConnectionManager } from "./utils/connection.js";
 import { SalesforceErrorHandler } from "./utils/errors.js";
 import { QueryTools } from "./tools/queryTools.js";
 import { ApexTools } from "./tools/apexTools.js";
+import { DataTools } from "./tools/dataTools.js";
 
 /**
  * Create the Salesforce MCP server with comprehensive Salesforce capabilities
@@ -167,6 +168,153 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: []
         }
+      },
+      {
+        name: "create-record",
+        description: "Create single or multiple records with auto-bulk switching",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            recordData: {
+              oneOf: [
+                { type: "object", description: "Single record data" },
+                { type: "array", items: { type: "object" }, description: "Multiple records data" }
+              ],
+              description: "Record data to create"
+            },
+            options: {
+              type: "object",
+              properties: {
+                allOrNone: {
+                  type: "boolean",
+                  description: "All records must succeed or all fail (default: false)"
+                }
+              }
+            }
+          },
+          required: ["sobjectType", "recordData"]
+        }
+      },
+      {
+        name: "get-record",
+        description: "Retrieve a record by ID with optional field selection",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            recordId: {
+              type: "string",
+              description: "Salesforce record ID"
+            },
+            fields: {
+              type: "array",
+              items: { type: "string" },
+              description: "Specific fields to retrieve (optional, retrieves all if not specified)"
+            }
+          },
+          required: ["sobjectType", "recordId"]
+        }
+      },
+      {
+        name: "update-record",
+        description: "Update single or multiple records with auto-bulk switching",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            recordData: {
+              oneOf: [
+                { type: "object", description: "Single record data with Id" },
+                { type: "array", items: { type: "object" }, description: "Multiple records data with Ids" }
+              ],
+              description: "Record data to update (must include Id field)"
+            },
+            options: {
+              type: "object",
+              properties: {
+                allOrNone: {
+                  type: "boolean",
+                  description: "All records must succeed or all fail (default: false)"
+                }
+              }
+            }
+          },
+          required: ["sobjectType", "recordData"]
+        }
+      },
+      {
+        name: "delete-record",
+        description: "Delete records by ID(s) with auto-bulk switching",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            recordIds: {
+              oneOf: [
+                { type: "string", description: "Single record ID" },
+                { type: "array", items: { type: "string" }, description: "Multiple record IDs" }
+              ],
+              description: "Record ID(s) to delete"
+            },
+            options: {
+              type: "object",
+              properties: {
+                allOrNone: {
+                  type: "boolean",
+                  description: "All records must succeed or all fail (default: false)"
+                }
+              }
+            }
+          },
+          required: ["sobjectType", "recordIds"]
+        }
+      },
+      {
+        name: "upsert-record",
+        description: "Upsert records using external ID with auto-bulk switching",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sobjectType: {
+              type: "string",
+              description: "SObject API name (e.g., Account, Contact, Custom__c)"
+            },
+            externalIdField: {
+              type: "string",
+              description: "External ID field name for upsert matching"
+            },
+            recordData: {
+              oneOf: [
+                { type: "object", description: "Single record data" },
+                { type: "array", items: { type: "object" }, description: "Multiple records data" }
+              ],
+              description: "Record data to upsert"
+            },
+            options: {
+              type: "object",
+              properties: {
+                allOrNone: {
+                  type: "boolean",
+                  description: "All records must succeed or all fail (default: false)"
+                }
+              }
+            }
+          },
+          required: ["sobjectType", "externalIdField", "recordData"]
+        }
       }
     ]
   };
@@ -236,6 +384,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await ApexTools.getApexLogs(args.limit, args.userId, args.startTime, args.operation);
     }
     
+    case "create-record": {
+      const args = request.params.arguments as { sobjectType: string; recordData: any; options?: { allOrNone?: boolean } };
+      return await DataTools.createRecord(args.sobjectType, args.recordData, args.options);
+    }
+    
+    case "get-record": {
+      const args = request.params.arguments as { sobjectType: string; recordId: string; fields?: string[] };
+      return await DataTools.getRecord(args.sobjectType, args.recordId, args.fields);
+    }
+    
+    case "update-record": {
+      const args = request.params.arguments as { sobjectType: string; recordData: any; options?: { allOrNone?: boolean } };
+      return await DataTools.updateRecord(args.sobjectType, args.recordData, args.options);
+    }
+    
+    case "delete-record": {
+      const args = request.params.arguments as { sobjectType: string; recordIds: string | string[]; options?: { allOrNone?: boolean } };
+      return await DataTools.deleteRecord(args.sobjectType, args.recordIds, args.options);
+    }
+    
+    case "upsert-record": {
+      const args = request.params.arguments as { sobjectType: string; externalIdField: string; recordData: any; options?: { allOrNone?: boolean } };
+      return await DataTools.upsertRecord(args.sobjectType, args.externalIdField, args.recordData, args.options);
+    }
+    
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);
   }
@@ -258,7 +431,7 @@ async function main() {
     await server.connect(transport);
     
     console.error('[Salesforce MCP Server] Server started successfully');
-    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs');
+    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs, create-record, get-record, update-record, delete-record, upsert-record');
     
   } catch (error) {
     console.error('[Salesforce MCP Server] Failed to start server:', error);
