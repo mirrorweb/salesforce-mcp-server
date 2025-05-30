@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.5.0",
+    "jsforce": "^3.8.2",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.42"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29"
+  }
+}
