@@ -18,6 +18,7 @@ import { validateConfig } from "./config/environment.js";
 import { ConnectionManager } from "./utils/connection.js";
 import { SalesforceErrorHandler } from "./utils/errors.js";
 import { QueryTools } from "./tools/queryTools.js";
+import { ApexTools } from "./tools/apexTools.js";
 
 /**
  * Create the Salesforce MCP server with comprehensive Salesforce capabilities
@@ -98,6 +99,74 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["sobjectType"]
         }
+      },
+      {
+        name: "execute-apex",
+        description: "Execute anonymous Apex code with debug log capture",
+        inputSchema: {
+          type: "object",
+          properties: {
+            apexCode: {
+              type: "string",
+              description: "Anonymous Apex code to execute"
+            },
+            captureDebugLogs: {
+              type: "boolean",
+              description: "Capture debug logs from execution (default: true)"
+            }
+          },
+          required: ["apexCode"]
+        }
+      },
+      {
+        name: "run-apex-tests",
+        description: "Run Apex tests with coverage and detailed results",
+        inputSchema: {
+          type: "object",
+          properties: {
+            testClasses: {
+              type: "array",
+              items: { type: "string" },
+              description: "Specific test classes to run (optional)"
+            },
+            testMethods: {
+              type: "array",
+              items: { type: "string" },
+              description: "Specific test methods to run in format 'ClassName.methodName' (optional)"
+            },
+            includeCoverage: {
+              type: "boolean",
+              description: "Include code coverage information (default: true)"
+            }
+          },
+          required: []
+        }
+      },
+      {
+        name: "get-apex-logs",
+        description: "Get debug logs with filtering and parsing options",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: {
+              type: "number",
+              description: "Maximum number of logs to retrieve (default: 10)"
+            },
+            userId: {
+              type: "string",
+              description: "Filter logs by user ID (optional)"
+            },
+            startTime: {
+              type: "string",
+              description: "Filter logs from this start time in ISO format (optional)"
+            },
+            operation: {
+              type: "string",
+              description: "Filter logs by operation type (optional)"
+            }
+          },
+          required: []
+        }
       }
     ]
   };
@@ -152,6 +221,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await QueryTools.describeSObject(args.sobjectType, args.useCache);
     }
     
+    case "execute-apex": {
+      const args = request.params.arguments as { apexCode: string; captureDebugLogs?: boolean };
+      return await ApexTools.executeApex(args.apexCode, args.captureDebugLogs);
+    }
+    
+    case "run-apex-tests": {
+      const args = request.params.arguments as { testClasses?: string[]; testMethods?: string[]; includeCoverage?: boolean };
+      return await ApexTools.runApexTests(args.testClasses, args.testMethods, args.includeCoverage);
+    }
+    
+    case "get-apex-logs": {
+      const args = request.params.arguments as { limit?: number; userId?: string; startTime?: string; operation?: string };
+      return await ApexTools.getApexLogs(args.limit, args.userId, args.startTime, args.operation);
+    }
+    
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);
   }
@@ -174,7 +258,7 @@ async function main() {
     await server.connect(transport);
     
     console.error('[Salesforce MCP Server] Server started successfully');
-    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject');
+    console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs');
     
   } catch (error) {
     console.error('[Salesforce MCP Server] Failed to start server:', error);
