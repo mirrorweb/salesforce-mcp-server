@@ -55,6 +55,12 @@ Thank you for helping improve this tool!
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+-   Node.js (version 18 or higher recommended)
+
 ### Installation
 
 ```bash
