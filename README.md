@@ -444,9 +444,12 @@ Each test file creates its own server instance, sends requests to test specific 
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## 🔗 Related Projects
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- [Model Context Protocol](https://github.com/modelcontextprotocol) - The protocol this server implements
+- [jsforce](https://github.com/jsforce/jsforce) - Salesforce API library used in this project
+- [Claude Desktop](https://claude.ai/desktop) - AI assistant that supports MCP servers
+- [Cline](https://github.com/saoudrizwan/claude-dev) - VS Code extension for AI-assisted development
 
 ## 👨‍💻 Author
 
@@ -456,9 +459,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Part of this implementation was developed with assistance from Claude Sonnet 4 using the Cline VS Code extension, demonstrating the power of AI-assisted development in creating comprehensive developer tools.
 
-## 🔗 Related Projects
+## 📄 License
 
-- [Model Context Protocol](https://github.com/modelcontextprotocol) - The protocol this server implements
-- [jsforce](https://github.com/jsforce/jsforce) - Salesforce API library used in this project
-- [Claude Desktop](https://claude.ai/desktop) - AI assistant that supports MCP servers
-- [Cline](https://github.com/saoudrizwan/claude-dev) - VS Code extension for AI-assisted development
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
