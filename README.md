@@ -23,10 +23,10 @@ A comprehensive Model Context Protocol (MCP) server that provides seamless Sales
 - **`delete-record`** - Single/bulk record deletion
 - **`upsert-record`** - External ID-based upsert operations
 
-#### 🔧 Metadata Tools
-- **`list-metadata-types`** - Discover 223+ metadata types
-- **`deploy-metadata`** - Metadata deployment with validation
-- **`retrieve-metadata`** - ⚠️ Currently disabled (see [Known Limitations](#known-limitations))
+#### 🔧 Metadata Tools (Component-Based)
+- **`list-metadata-types`** - Discover metadata types
+- **`deploy-metadata`** - Deploy individual metadata components (e.g., ApexClass, CustomObject)
+- **`retrieve-metadata`** - Retrieve individual metadata components
 
 #### 🔗 Connection Tools
 - **`test-connection`** - Connection validation and health monitoring
@@ -200,19 +200,40 @@ Create single or multiple records with auto-bulk switching.
 }
 ```
 
-### Metadata Tools
+### Metadata Tools (Component-Based)
 
 #### deploy-metadata
-Deploy metadata packages to your Salesforce org.
+Deploy individual metadata components or arrays of components.
 
 ```typescript
-// Example: Deploy with validation only
+// Example: Deploy a single ApexClass
 {
-  "zipData": "UEsDBBQACAgIAB...", // Base64 encoded zip
+  "components": {
+    "type": "ApexClass",
+    "fullName": "MyExampleClass",
+    "metadata": {
+      "body": "public class MyExampleClass {\n    public static void sayHello() {\n        System.debug('Hello from component deployment!');\n    }\n}"
+    }
+  },
   "options": {
-    "checkOnly": true,
-    "rollbackOnError": true,
-    "runTests": ["CustomObjectTest"]
+    "checkOnly": true, // Optional: validate without saving
+    "runTests": ["MyExampleClass_Test"] // Optional: specify tests to run
+  }
+}
+```
+
+#### retrieve-metadata
+Retrieve individual metadata components or arrays of components.
+
+```typescript
+// Example: Retrieve an ApexClass component
+{
+  "components": {
+    "type": "ApexClass",
+    "fullName": "MyExistingClass"
+  },
+  "options": {
+    "includeBody": true // Optional: include source code
   }
 }
 ```
@@ -229,11 +250,6 @@ Deploy metadata packages to your Salesforce org.
 2. Configure OAuth settings and obtain client credentials
 3. Generate a refresh token using the OAuth2 flow
 4. Set environment variables as shown in the configuration section
-
-## ⚠️ Known Limitations
-
-### retrieve-metadata Tool
-The `retrieve-metadata` tool is currently disabled due to jsforce API compatibility issues. This limitation will be resolved in a future version.
 
 ## 🏗️ Architecture
 

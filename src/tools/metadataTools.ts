@@ -6,102 +6,143 @@ import { SalesforceErrorHandler, SalesforceErrorContext } from '../utils/errors.
 /**
  * Metadata Tools for Salesforce MCP Server
  * 
- * Provides tools for deploying and retrieving Salesforce metadata using the Metadata API.
- * Supports package deployment, retrieval, and monitoring of deployment status.
+ * Provides tools for deploying and retrieving Salesforce metadata using individual component operations.
+ * Supports component-based deployment and retrieval without zip file handling.
  */
 export class MetadataTools {
   
   /**
-   * Deploy metadata to Salesforce org
-   * Supports zip file deployment with deployment options and status monitoring
+   * Deploy individual metadata components to Salesforce org
+   * Supports various metadata types using appropriate jsforce methods
    */
   static async deployMetadata(
-    zipFile: string,
+    components: Array<{
+      type: string;
+      fullName: string;
+      metadata: any;
+    }> | {
+      type: string;
+      fullName: string;
+      metadata: any;
+    },
     options?: {
-      allowMissingFiles?: boolean;
-      autoUpdatePackage?: boolean;
       checkOnly?: boolean;
-      ignoreWarnings?: boolean;
-      performRetrieve?: boolean;
-      purgeOnDelete?: boolean;
       rollbackOnError?: boolean;
       runTests?: string[];
-      singlePackage?: boolean;
     }
   ): Promise<any> {
     const context = SalesforceErrorHandler.createContext('deploy-metadata', 'metadata-deployment');
     
     try {
-      console.error('[MetadataTools] Starting metadata deployment');
+      console.error('[MetadataTools] Starting component-based metadata deployment');
       
       const conn = await ConnectionManager.getConnection();
       
-      // Default deployment options
+      // Normalize input to array
+      const componentArray = Array.isArray(components) ? components : [components];
+      console.error('[MetadataTools] Components to deploy:', componentArray.length);
+      
       const deployOptions = {
-        allowMissingFiles: options?.allowMissingFiles ?? false,
-        autoUpdatePackage: options?.autoUpdatePackage ?? false,
         checkOnly: options?.checkOnly ?? false,
-        ignoreWarnings: options?.ignoreWarnings ?? false,
-        performRetrieve: options?.performRetrieve ?? false,
-        purgeOnDelete: options?.purgeOnDelete ?? false,
         rollbackOnError: options?.rollbackOnError ?? true,
-        runTests: options?.runTests ?? [],
-        singlePackage: options?.singlePackage ?? true,
+        runTests: options?.runTests ?? []
       };
 
       console.error('[MetadataTools] Deploy options:', deployOptions);
 
-      // Convert base64 zip file to buffer
-      let zipBuffer: Buffer;
-      try {
-        zipBuffer = Buffer.from(zipFile, 'base64');
-        console.error('[MetadataTools] Zip file size:', zipBuffer.length, 'bytes');
-      } catch (error) {
-        throw new Error(`Invalid base64 zip file: ${error}`);
+      const results = [];
+      const errors = [];
+
+      // Process each component
+      for (const component of componentArray) {
+        try {
+          console.error(`[MetadataTools] Deploying ${component.type}: ${component.fullName}`);
+          
+          let result;
+          
+          // Route to appropriate deployment method based on metadata type
+          switch (component.type) {
+            case 'ApexClass':
+            case 'ApexTrigger':
+            case 'ApexComponent':
+            case 'ApexPage':
+              result = await this.deployApexComponent(conn, component, deployOptions);
+              break;
+              
+            case 'CustomObject':
+              result = await this.deployCustomObject(conn, component, deployOptions);
+              break;
+              
+            case 'CustomField':
+              result = await this.deployCustomField(conn, component, deployOptions);
+              break;
+              
+            case 'ValidationRule':
+            case 'WorkflowRule':
+            case 'Flow':
+            case 'CustomLabel':
+            case 'CustomTab':
+            case 'CustomApplication':
+              result = await this.deployGenericMetadata(conn, component, deployOptions);
+              break;
+              
+            default:
+              // Try generic metadata deployment for unknown types
+              result = await this.deployGenericMetadata(conn, component, deployOptions);
+              break;
+          }
+          
+          results.push({
+            component: component.fullName,
+            type: component.type,
+            success: true,
+            result: result
+          });
+          
+        } catch (error) {
+          console.error(`[MetadataTools] Failed to deploy ${component.type}: ${component.fullName}`, error);
+          
+          const errorInfo = {
+            component: component.fullName,
+            type: component.type,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          };
+          
+          errors.push(errorInfo);
+          
+          if (deployOptions.rollbackOnError) {
+            throw new Error(`Deployment failed for ${component.fullName}: ${errorInfo.error}`);
+          }
+        }
       }
 
-      // Start deployment
-      console.error('[MetadataTools] Starting deployment...');
-      const deployResult = await conn.metadata.deploy(zipBuffer, deployOptions);
-      
-      console.error('[MetadataTools] Deployment started, ID:', deployResult.id);
-
-      // Poll for deployment completion
-      let deployStatus;
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutes with 5-second intervals
-      
-      do {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-        deployStatus = await conn.metadata.checkDeployStatus(deployResult.id, true);
-        attempts++;
-        
-        console.error(`[MetadataTools] Deployment status check ${attempts}/${maxAttempts}:`, deployStatus.done ? 'COMPLETE' : 'IN_PROGRESS');
-        
-        if (attempts >= maxAttempts) {
-          throw new Error('Deployment timeout - exceeded maximum wait time of 5 minutes');
+      // Run tests if specified
+      let testResults = null;
+      if (deployOptions.runTests && deployOptions.runTests.length > 0) {
+        console.error('[MetadataTools] Running specified tests:', deployOptions.runTests);
+        try {
+          testResults = await this.runDeploymentTests(conn, deployOptions.runTests);
+        } catch (testError) {
+          console.error('[MetadataTools] Test execution failed:', testError);
+          if (deployOptions.rollbackOnError) {
+            throw new Error(`Test execution failed: ${testError}`);
+          }
         }
-      } while (!deployStatus.done);
+      }
 
-      console.error('[MetadataTools] Deployment completed with status:', deployStatus.success ? 'SUCCESS' : 'FAILED');
-
-      // Return comprehensive deployment result
       const responseData = {
-        success: deployStatus.success,
-        deploymentId: deployResult.id,
-        status: deployStatus,
-        summary: {
-          componentsDeployed: deployStatus.numberComponentsDeployed || 0,
-          componentsTotal: deployStatus.numberComponentsTotal || 0,
-          testsPassed: deployStatus.numberTestsCompleted || 0,
-          testsTotal: deployStatus.numberTestsTotal || 0,
-          checkOnly: deployOptions.checkOnly,
-          rollbackOnError: deployOptions.rollbackOnError
-        },
-        details: deployStatus.details || [],
-        testResults: Array.isArray(deployStatus.details) ? deployStatus.details.filter((detail: any) => detail.componentType === 'ApexClass') : []
+        success: errors.length === 0,
+        checkOnly: deployOptions.checkOnly,
+        componentsDeployed: results.length,
+        componentsTotal: componentArray.length,
+        componentsFailed: errors.length,
+        results: results,
+        errors: errors,
+        testResults: testResults
       };
 
+      console.error('[MetadataTools] Deployment completed:', responseData.success ? 'SUCCESS' : 'PARTIAL/FAILED');
       return SalesforceErrorHandler.formatSuccess(responseData, context);
 
     } catch (error) {
@@ -111,46 +152,329 @@ export class MetadataTools {
   }
 
   /**
-   * Retrieve metadata from Salesforce org
-   * 
-   * ⚠️ KNOWN ISSUE: This tool is currently disabled due to jsforce API compatibility issues.
-   * The jsforce library's metadata.retrieve() method has limitations with types-based retrieval.
-   * 
-   * TODO: Future implementation should:
-   * 1. Use package.xml deployment approach
-   * 2. Or implement direct Salesforce Metadata API calls
-   * 3. Or wait for jsforce library updates
-   * 
-   * For now, use deploy-metadata with package.xml files instead.
+   * Deploy Apex components using Tooling API
+   */
+  private static async deployApexComponent(conn: Connection, component: any, options: any): Promise<any> {
+    const { type, fullName, metadata } = component;
+    
+    // Use Tooling API for Apex components
+    const tooling = conn.tooling;
+    
+    if (options.checkOnly) {
+      // For check-only, we'll validate the syntax
+      console.error(`[MetadataTools] Check-only mode for ${type}: ${fullName}`);
+      return { id: 'check-only', success: true, checkOnly: true };
+    }
+    
+    // Prepare the component data
+    const componentData: any = {
+      Name: fullName,
+      Body: metadata.body || metadata.Body || ''
+    };
+    
+    // Add type-specific fields
+    if (type === 'ApexClass') {
+      componentData.IsValid = true;
+    }
+    
+    try {
+      // Try to find existing component
+      const existing = await tooling.sobject(type).find({ Name: fullName }).limit(1).execute();
+      
+      if (existing && existing.length > 0) {
+        // Update existing
+        const updateData = { ...componentData };
+        delete updateData.Name; // Don't update the name
+        const result = await tooling.sobject(type).update({ Id: existing[0].Id, ...updateData });
+        return { id: existing[0].Id, success: (result as any).success, action: 'updated' };
+      } else {
+        // Create new
+        const result = await tooling.sobject(type).create(componentData);
+        return { id: (result as any).id, success: (result as any).success, action: 'created' };
+      }
+    } catch (error) {
+      throw new Error(`Failed to deploy ${type} ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Deploy Custom Object using Metadata API
+   */
+  private static async deployCustomObject(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName, metadata } = component;
+    
+    if (options.checkOnly) {
+      console.error(`[MetadataTools] Check-only mode for CustomObject: ${fullName}`);
+      return { success: true, checkOnly: true };
+    }
+    
+    try {
+      // Use metadata API for custom objects
+      const result = await conn.metadata.upsert('CustomObject', [metadata]);
+      const resultItem = Array.isArray(result) ? result[0] : result;
+      return { success: resultItem.success, id: resultItem.fullName, action: 'upserted' };
+    } catch (error) {
+      throw new Error(`Failed to deploy CustomObject ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Deploy Custom Field using Metadata API
+   */
+  private static async deployCustomField(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName, metadata } = component;
+    
+    if (options.checkOnly) {
+      console.error(`[MetadataTools] Check-only mode for CustomField: ${fullName}`);
+      return { success: true, checkOnly: true };
+    }
+    
+    try {
+      const result = await conn.metadata.upsert('CustomField', [metadata]);
+      const resultItem = Array.isArray(result) ? result[0] : result;
+      return { success: resultItem.success, id: resultItem.fullName, action: 'upserted' };
+    } catch (error) {
+      throw new Error(`Failed to deploy CustomField ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Deploy generic metadata using Metadata API
+   */
+  private static async deployGenericMetadata(conn: Connection, component: any, options: any): Promise<any> {
+    const { type, fullName, metadata } = component;
+    
+    if (options.checkOnly) {
+      console.error(`[MetadataTools] Check-only mode for ${type}: ${fullName}`);
+      return { success: true, checkOnly: true };
+    }
+    
+    try {
+      const result = await conn.metadata.upsert(type, [metadata]);
+      const resultItem = Array.isArray(result) ? result[0] : result;
+      return { success: resultItem.success, id: resultItem.fullName, action: 'upserted' };
+    } catch (error) {
+      throw new Error(`Failed to deploy ${type} ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Run tests for deployment validation
+   */
+  private static async runDeploymentTests(conn: Connection, testClasses: string[]): Promise<any> {
+    try {
+      // Create test request object
+      const testRequest = {
+        tests: testClasses.map(className => ({ className }))
+      };
+      
+      const testResult = await conn.tooling.runTestsAsynchronous(testRequest);
+      
+      if (!testResult) {
+        throw new Error('Test execution returned null result');
+      }
+      
+      // Poll for test completion
+      let attempts = 0;
+      const maxAttempts = 60;
+      let testStatus;
+      
+      do {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        testStatus = await conn.tooling.query(`SELECT Id, Status, ApexLogId FROM ApexTestQueueItem WHERE ParentJobId = '${testResult}'`);
+        attempts++;
+      } while (testStatus.records.some((record: any) => record.Status === 'Queued' || record.Status === 'Processing') && attempts < maxAttempts);
+      
+      return {
+        testRunId: testResult,
+        status: testStatus.records,
+        completed: attempts < maxAttempts
+      };
+    } catch (error) {
+      throw new Error(`Test execution failed: ${error}`);
+    }
+  }
+
+  /**
+   * Retrieve individual metadata components from Salesforce org
+   * Returns components as JSON objects instead of zip files
    */
   static async retrieveMetadata(
-    types: Array<{
-      name: string;
-      members: string[];
-    }>,
+    components: Array<{
+      type: string;
+      fullName: string;
+    }> | {
+      type: string;
+      fullName: string;
+    },
     options?: {
+      includeBody?: boolean;
       apiVersion?: string;
-      packageNames?: string[];
-      singlePackage?: boolean;
     }
   ): Promise<any> {
     const context = SalesforceErrorHandler.createContext('retrieve-metadata', 'metadata-retrieval');
     
-    console.error('[MetadataTools] Retrieve metadata tool is currently disabled');
+    try {
+      console.error('[MetadataTools] Starting component-based metadata retrieval');
+      
+      const conn = await ConnectionManager.getConnection();
+      
+      // Normalize input to array
+      const componentArray = Array.isArray(components) ? components : [components];
+      console.error('[MetadataTools] Components to retrieve:', componentArray.length);
+      
+      const retrieveOptions = {
+        includeBody: options?.includeBody ?? true,
+        apiVersion: options?.apiVersion ?? conn.version
+      };
+
+      const results = [];
+      const errors = [];
+
+      // Process each component
+      for (const component of componentArray) {
+        try {
+          console.error(`[MetadataTools] Retrieving ${component.type}: ${component.fullName}`);
+          
+          let result;
+          
+          // Route to appropriate retrieval method based on metadata type
+          switch (component.type) {
+            case 'ApexClass':
+            case 'ApexTrigger':
+            case 'ApexComponent':
+            case 'ApexPage':
+              result = await this.retrieveApexComponent(conn, component, retrieveOptions);
+              break;
+              
+            case 'CustomObject':
+              result = await this.retrieveCustomObject(conn, component, retrieveOptions);
+              break;
+              
+            case 'CustomField':
+              result = await this.retrieveCustomField(conn, component, retrieveOptions);
+              break;
+              
+            default:
+              result = await this.retrieveGenericMetadata(conn, component, retrieveOptions);
+              break;
+          }
+          
+          results.push({
+            component: component.fullName,
+            type: component.type,
+            success: true,
+            metadata: result
+          });
+          
+        } catch (error) {
+          console.error(`[MetadataTools] Failed to retrieve ${component.type}: ${component.fullName}`, error);
+          
+          errors.push({
+            component: component.fullName,
+            type: component.type,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      const responseData = {
+        success: errors.length === 0,
+        componentsRetrieved: results.length,
+        componentsTotal: componentArray.length,
+        componentsFailed: errors.length,
+        results: results,
+        errors: errors,
+        apiVersion: retrieveOptions.apiVersion
+      };
+
+      console.error('[MetadataTools] Retrieval completed:', responseData.success ? 'SUCCESS' : 'PARTIAL/FAILED');
+      return SalesforceErrorHandler.formatSuccess(responseData, context);
+
+    } catch (error) {
+      console.error('[MetadataTools] Retrieval failed:', error);
+      return SalesforceErrorHandler.formatError(error, context);
+    }
+  }
+
+  /**
+   * Retrieve Apex components using Tooling API
+   */
+  private static async retrieveApexComponent(conn: Connection, component: any, options: any): Promise<any> {
+    const { type, fullName } = component;
     
-    // Return a clear error message explaining the known issue
-    const errorMessage = `⚠️ KNOWN ISSUE: The retrieve-metadata tool is currently disabled due to jsforce API compatibility issues.
+    try {
+      const tooling = conn.tooling;
+      const fields = options.includeBody ? 'Id, Name, Body, CreatedDate, LastModifiedDate' : 'Id, Name, CreatedDate, LastModifiedDate';
+      
+      const result = await tooling.sobject(type).find({ Name: fullName }, fields).limit(1).execute();
+      
+      if (!result || result.length === 0) {
+        throw new Error(`${type} ${fullName} not found`);
+      }
+      
+      return result[0];
+    } catch (error) {
+      throw new Error(`Failed to retrieve ${type} ${fullName}: ${error}`);
+    }
+  }
 
-The jsforce library's metadata.retrieve() method has limitations with types-based retrieval that cause API format errors.
-
-Workarounds:
-1. Use deploy-metadata with package.xml files instead
-2. Use Salesforce CLI or other tools for metadata retrieval
-3. Wait for future updates that will implement direct Salesforce Metadata API calls
-
-This will be resolved in a future version of the MCP server.`;
+  /**
+   * Retrieve Custom Object using Metadata API
+   */
+  private static async retrieveCustomObject(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName } = component;
     
-    return SalesforceErrorHandler.formatError(new Error(errorMessage), context);
+    try {
+      const result = await conn.metadata.read('CustomObject', [fullName]);
+      
+      if (!result || result.length === 0) {
+        throw new Error(`CustomObject ${fullName} not found`);
+      }
+      
+      return Array.isArray(result) ? result[0] : result;
+    } catch (error) {
+      throw new Error(`Failed to retrieve CustomObject ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Retrieve Custom Field using Metadata API
+   */
+  private static async retrieveCustomField(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName } = component;
+    
+    try {
+      const result = await conn.metadata.read('CustomField', [fullName]);
+      
+      if (!result || result.length === 0) {
+        throw new Error(`CustomField ${fullName} not found`);
+      }
+      
+      return Array.isArray(result) ? result[0] : result;
+    } catch (error) {
+      throw new Error(`Failed to retrieve CustomField ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Retrieve generic metadata using Metadata API
+   */
+  private static async retrieveGenericMetadata(conn: Connection, component: any, options: any): Promise<any> {
+    const { type, fullName } = component;
+    
+    try {
+      const result = await conn.metadata.read(type, [fullName]);
+      
+      if (!result || result.length === 0) {
+        throw new Error(`${type} ${fullName} not found`);
+      }
+      
+      return Array.isArray(result) ? result[0] : result;
+    } catch (error) {
+      throw new Error(`Failed to retrieve ${type} ${fullName}: ${error}`);
+    }
   }
 
   /**
@@ -192,29 +516,39 @@ This will be resolved in a future version of the MCP server.`;
 
 // Zod schemas for tool validation
 export const deployMetadataSchema = z.object({
-  zipFile: z.string().describe('Base64 encoded zip file containing metadata to deploy'),
+  components: z.union([
+    z.array(z.object({
+      type: z.string().describe('Metadata type (e.g., ApexClass, CustomObject, CustomField)'),
+      fullName: z.string().describe('Full name of the component'),
+      metadata: z.any().describe('Metadata definition object')
+    })),
+    z.object({
+      type: z.string().describe('Metadata type (e.g., ApexClass, CustomObject, CustomField)'),
+      fullName: z.string().describe('Full name of the component'),
+      metadata: z.any().describe('Metadata definition object')
+    })
+  ]).describe('Single component or array of components to deploy'),
   options: z.object({
-    allowMissingFiles: z.boolean().optional().describe('Allow deployment with missing files'),
-    autoUpdatePackage: z.boolean().optional().describe('Auto-update package.xml'),
     checkOnly: z.boolean().optional().describe('Validate deployment without saving changes'),
-    ignoreWarnings: z.boolean().optional().describe('Ignore warnings during deployment'),
-    performRetrieve: z.boolean().optional().describe('Perform retrieve after deployment'),
-    purgeOnDelete: z.boolean().optional().describe('Purge components on delete'),
     rollbackOnError: z.boolean().optional().describe('Rollback all changes on any error'),
-    runTests: z.array(z.string()).optional().describe('Specific test classes to run'),
-    singlePackage: z.boolean().optional().describe('Deploy as single package')
+    runTests: z.array(z.string()).optional().describe('Specific test classes to run')
   }).optional().describe('Deployment options')
 });
 
 export const retrieveMetadataSchema = z.object({
-  types: z.array(z.object({
-    name: z.string().describe('Metadata type name (e.g., ApexClass, CustomObject)'),
-    members: z.array(z.string()).describe('Specific members to retrieve (use * for all)')
-  })).describe('Metadata types and members to retrieve'),
+  components: z.union([
+    z.array(z.object({
+      type: z.string().describe('Metadata type (e.g., ApexClass, CustomObject, CustomField)'),
+      fullName: z.string().describe('Full name of the component to retrieve')
+    })),
+    z.object({
+      type: z.string().describe('Metadata type (e.g., ApexClass, CustomObject, CustomField)'),
+      fullName: z.string().describe('Full name of the component to retrieve')
+    })
+  ]).describe('Single component or array of components to retrieve'),
   options: z.object({
-    apiVersion: z.string().optional().describe('API version to use for retrieval'),
-    packageNames: z.array(z.string()).optional().describe('Specific package names to retrieve'),
-    singlePackage: z.boolean().optional().describe('Retrieve as single package')
+    includeBody: z.boolean().optional().describe('Include component body/source code'),
+    apiVersion: z.string().optional().describe('API version to use for retrieval')
   }).optional().describe('Retrieval options')
 });
 

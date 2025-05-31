@@ -528,13 +528,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     
     case "deploy-metadata": {
-      const args = request.params.arguments as { zipFile: string; options?: any };
-      return await MetadataTools.deployMetadata(args.zipFile, args.options);
+      const args = request.params.arguments as { components: any; options?: any };
+      return await MetadataTools.deployMetadata(args.components, args.options);
     }
     
     case "retrieve-metadata": {
-      const args = request.params.arguments as { types: Array<{ name: string; members: string[] }>; options?: any };
-      return await MetadataTools.retrieveMetadata(args.types, args.options);
+      const args = request.params.arguments as { components: any; options?: any };
+      return await MetadataTools.retrieveMetadata(args.components, args.options);
     }
     
     case "list-metadata-types": {

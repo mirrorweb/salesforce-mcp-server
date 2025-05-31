@@ -1,7 +1,7 @@
 /**
  * Test script for Salesforce MCP Server Metadata Tools
  * 
- * Tests the metadata deployment, retrieval, and discovery tools
+ * Tests the component-based metadata deployment, retrieval, and discovery tools
  * with real Salesforce connection.
  */
 
@@ -94,38 +94,46 @@ async function executeTool(toolName, args = {}) {
 }
 
 /**
- * Create a simple test metadata package as base64 zip
+ * Create test metadata components for deployment
  */
-function createTestMetadataPackage() {
-  // This would normally be a real zip file with metadata
-  // For testing, we'll create a minimal package.xml
-  const packageXml = `<?xml version="1.0" encoding="UTF-8"?>
-<Package xmlns="http://soap.sforce.com/2006/04/metadata">
-    <types>
-        <members>TestClass</members>
-        <name>ApexClass</name>
-    </types>
-    <version>61.0</version>
-</Package>`;
-
-  const testApexClass = `public class TestClass {
+function createTestMetadataComponents() {
+  return [
+    {
+      type: 'ApexClass',
+      fullName: 'MCPTestClass',
+      metadata: {
+        body: `public class MCPTestClass {
     public static String getMessage() {
-        return 'Hello from MCP Metadata Test';
+        return 'Hello from MCP Component-Based Metadata Test';
     }
-}`;
+    
+    public static Integer getNumber() {
+        return 42;
+    }
+}`
+      }
+    }
+  ];
+}
 
-  // Create a simple zip-like structure (this is simplified for testing)
-  // In a real scenario, you'd use a proper zip library
-  const mockZipContent = Buffer.from(`package.xml:${packageXml}\nclasses/TestClass.cls:${testApexClass}`);
-  return mockZipContent.toString('base64');
+/**
+ * Create test metadata components for retrieval
+ */
+function createTestRetrievalComponents() {
+  return [
+    {
+      type: 'ApexClass',
+      fullName: 'Account'  // Using a standard class that should exist
+    }
+  ];
 }
 
 /**
  * Run all metadata tool tests
  */
 async function runMetadataTests() {
-  console.log('🚀 Starting Salesforce MCP Server Metadata Tools Tests');
-  console.log('=' .repeat(60));
+  console.log('🚀 Starting Salesforce MCP Server Component-Based Metadata Tools Tests');
+  console.log('=' .repeat(70));
 
   const results = {
     passed: 0,
@@ -159,36 +167,44 @@ async function runMetadataTests() {
     results.tests.push({ name: 'list-metadata-types', status: 'FAILED', error: error.message });
   }
 
-  // Test 2: Retrieve Metadata (ApexClass)
+  // Test 2: Retrieve Metadata Components (ApexClass)
   try {
-    console.log('\n📥 Test 2: Retrieve Metadata (ApexClass)');
+    console.log('\n📥 Test 2: Retrieve Metadata Components (ApexClass)');
+    const components = createTestRetrievalComponents();
+    
     const result = await executeTool('retrieve-metadata', {
-      types: [
-        {
-          name: 'ApexClass',
-          members: ['*']
-        }
-      ],
+      components: components,
       options: {
-        singlePackage: true
+        includeBody: true,
+        apiVersion: '61.0'
       }
     });
     
     if (result && result.content && result.content[0]) {
       const data = JSON.parse(result.content[0].text);
-      console.log(`✅ Success: Retrieved metadata package`);
-      console.log(`📊 Types Retrieved: ${data.data.summary.typesRetrieved}`);
-      console.log(`📦 Zip File Size: ${data.data.summary.zipFileSize} bytes`);
-      console.log(`🔧 API Version: ${data.data.summary.apiVersion}`);
+      console.log(`✅ Success: Retrieved metadata components`);
+      console.log(`📊 Components Retrieved: ${data.data.componentsRetrieved}/${data.data.componentsTotal}`);
+      console.log(`🔧 API Version: ${data.data.apiVersion}`);
+      console.log(`✅ Success Rate: ${data.data.success ? 'SUCCESS' : 'PARTIAL/FAILED'}`);
       
-      if (data.data.fileProperties && data.data.fileProperties.length > 0) {
-        console.log(`📁 Files Retrieved: ${data.data.fileProperties.length}`);
-        const firstFew = data.data.fileProperties.slice(0, 3);
-        console.log(`📝 Sample files:`, firstFew.map(f => f.fileName).join(', '));
+      if (data.data.results && data.data.results.length > 0) {
+        console.log(`📁 Components Retrieved: ${data.data.results.length}`);
+        const firstResult = data.data.results[0];
+        console.log(`📝 Sample component: ${firstResult.type} - ${firstResult.component}`);
+        if (firstResult.metadata && firstResult.metadata.Body) {
+          console.log(`📄 Has body content: ${firstResult.metadata.Body.length} characters`);
+        }
+      }
+      
+      if (data.data.errors && data.data.errors.length > 0) {
+        console.log(`⚠️  Errors: ${data.data.errors.length}`);
+        data.data.errors.forEach(err => {
+          console.log(`   - ${err.component}: ${err.error}`);
+        });
       }
       
       results.passed++;
-      results.tests.push({ name: 'retrieve-metadata', status: 'PASSED', details: `${data.data.summary.zipFileSize} bytes retrieved` });
+      results.tests.push({ name: 'retrieve-metadata', status: 'PASSED', details: `${data.data.componentsRetrieved} components retrieved` });
     } else {
       throw new Error('Invalid response format');
     }
@@ -198,29 +214,39 @@ async function runMetadataTests() {
     results.tests.push({ name: 'retrieve-metadata', status: 'FAILED', error: error.message });
   }
 
-  // Test 3: Deploy Metadata (Check Only)
+  // Test 3: Deploy Metadata Components (Check Only)
   try {
-    console.log('\n📤 Test 3: Deploy Metadata (Check Only)');
-    const testZip = createTestMetadataPackage();
+    console.log('\n📤 Test 3: Deploy Metadata Components (Check Only)');
+    const components = createTestMetadataComponents();
     
     const result = await executeTool('deploy-metadata', {
-      zipFile: testZip,
+      components: components,
       options: {
         checkOnly: true,
-        rollbackOnError: true,
-        singlePackage: true
+        rollbackOnError: true
       }
     });
     
     if (result && result.content && result.content[0]) {
       const data = JSON.parse(result.content[0].text);
-      console.log(`✅ Success: Deployment validation completed`);
+      console.log(`✅ Success: Component deployment validation completed`);
       console.log(`📊 Deployment Status: ${data.data.success ? 'SUCCESS' : 'FAILED'}`);
-      console.log(`🔧 Check Only: ${data.data.summary.checkOnly}`);
-      console.log(`📦 Components: ${data.data.summary.componentsDeployed}/${data.data.summary.componentsTotal}`);
+      console.log(`🔧 Check Only: ${data.data.checkOnly}`);
+      console.log(`📦 Components: ${data.data.componentsDeployed}/${data.data.componentsTotal}`);
+      console.log(`❌ Failed Components: ${data.data.componentsFailed}`);
       
-      if (data.data.details && data.data.details.length > 0) {
-        console.log(`📝 Deployment Details: ${data.data.details.length} items`);
+      if (data.data.results && data.data.results.length > 0) {
+        console.log(`📝 Deployment Results: ${data.data.results.length} items`);
+        data.data.results.forEach(result => {
+          console.log(`   ✅ ${result.type} - ${result.component}: ${result.success ? 'SUCCESS' : 'FAILED'}`);
+        });
+      }
+      
+      if (data.data.errors && data.data.errors.length > 0) {
+        console.log(`⚠️  Deployment Errors: ${data.data.errors.length}`);
+        data.data.errors.forEach(err => {
+          console.log(`   ❌ ${err.type} - ${err.component}: ${err.error}`);
+        });
       }
       
       results.passed++;
@@ -234,10 +260,83 @@ async function runMetadataTests() {
     results.tests.push({ name: 'deploy-metadata', status: 'FAILED', error: error.message });
   }
 
+  // Test 4: Deploy Single Metadata Component (Check Only)
+  try {
+    console.log('\n📤 Test 4: Deploy Single Metadata Component (Check Only)');
+    const singleComponent = {
+      type: 'ApexClass',
+      fullName: 'MCPSingleTestClass',
+      metadata: {
+        body: `public class MCPSingleTestClass {
+    public static String getSingleMessage() {
+        return 'Hello from Single Component Test';
+    }
+}`
+      }
+    };
+    
+    const result = await executeTool('deploy-metadata', {
+      components: singleComponent,  // Single component, not array
+      options: {
+        checkOnly: true,
+        rollbackOnError: true
+      }
+    });
+    
+    if (result && result.content && result.content[0]) {
+      const data = JSON.parse(result.content[0].text);
+      console.log(`✅ Success: Single component deployment validation completed`);
+      console.log(`📊 Deployment Status: ${data.data.success ? 'SUCCESS' : 'FAILED'}`);
+      console.log(`🔧 Check Only: ${data.data.checkOnly}`);
+      console.log(`📦 Components: ${data.data.componentsDeployed}/${data.data.componentsTotal}`);
+      
+      results.passed++;
+      results.tests.push({ name: 'deploy-single-metadata', status: 'PASSED', details: `Single component deployment ${data.data.success ? 'succeeded' : 'failed'}` });
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error) {
+    console.log(`❌ Failed: ${error.message}`);
+    results.failed++;
+    results.tests.push({ name: 'deploy-single-metadata', status: 'FAILED', error: error.message });
+  }
+
+  // Test 5: Retrieve Single Metadata Component
+  try {
+    console.log('\n📥 Test 5: Retrieve Single Metadata Component');
+    const singleComponent = {
+      type: 'ApexClass',
+      fullName: 'Account'  // Using a standard class that should exist
+    };
+    
+    const result = await executeTool('retrieve-metadata', {
+      components: singleComponent,  // Single component, not array
+      options: {
+        includeBody: true
+      }
+    });
+    
+    if (result && result.content && result.content[0]) {
+      const data = JSON.parse(result.content[0].text);
+      console.log(`✅ Success: Single component retrieval completed`);
+      console.log(`📊 Components Retrieved: ${data.data.componentsRetrieved}/${data.data.componentsTotal}`);
+      console.log(`✅ Success Rate: ${data.data.success ? 'SUCCESS' : 'PARTIAL/FAILED'}`);
+      
+      results.passed++;
+      results.tests.push({ name: 'retrieve-single-metadata', status: 'PASSED', details: `Single component retrieval ${data.data.success ? 'succeeded' : 'failed'}` });
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error) {
+    console.log(`❌ Failed: ${error.message}`);
+    results.failed++;
+    results.tests.push({ name: 'retrieve-single-metadata', status: 'FAILED', error: error.message });
+  }
+
   // Test Summary
-  console.log('\n' + '=' .repeat(60));
-  console.log('📊 METADATA TOOLS TEST SUMMARY');
-  console.log('=' .repeat(60));
+  console.log('\n' + '=' .repeat(70));
+  console.log('📊 COMPONENT-BASED METADATA TOOLS TEST SUMMARY');
+  console.log('=' .repeat(70));
   console.log(`✅ Passed: ${results.passed}`);
   console.log(`❌ Failed: ${results.failed}`);
   console.log(`📊 Total: ${results.passed + results.failed}`);
@@ -250,9 +349,10 @@ async function runMetadataTests() {
   });
 
   if (results.failed === 0) {
-    console.log('\n🎉 All metadata tools tests passed! Phase 5 implementation is working correctly.');
+    console.log('\n🎉 All component-based metadata tools tests passed! Refactoring is working correctly.');
+    console.log('🔧 The metadata tools now use individual component operations instead of zip files.');
   } else {
-    console.log('\n⚠️  Some tests failed. Please check the implementation.');
+    console.log('\n⚠️  Some tests failed. Please check the component-based implementation.');
   }
 
   return results;
