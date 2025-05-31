@@ -2,6 +2,18 @@
 
 A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools like Claude Desktop, GitHub Copilot, and other MCP-compatible clients.
 
+## ⚠️ Current Status & Disclaimer
+
+**This server is currently in a testing and development phase.**
+
+While it offers a comprehensive set of tools for Salesforce integration, please be cautious when using it, especially with production Salesforce orgs. Thorough testing has been conducted, but unexpected issues may still arise.
+
+**Feedback & Issue Reporting:**
+Your feedback is highly valuable! If you encounter any issues or have suggestions for improvement:
+- **GitHub Issues**: Please submit an issue ticket on the project's GitHub repository.
+
+Thank you for helping improve this tool!
+
 ## 🚀 Features
 
 ### 15 Comprehensive Tools
@@ -273,10 +285,10 @@ Retrieve individual metadata components or arrays of components.
 npm test
 
 # Test individual tools
-node test-tools.js
-node test-metadata-tools.js
-node test-apex-tools.js
-node test-data-tools.js
+node tests/test-tools.js
+node tests/test-metadata-tools.js
+node tests/test-apex-tools.js
+node tests/test-data-tools.js
 ```
 
 ## 🤝 Contributing

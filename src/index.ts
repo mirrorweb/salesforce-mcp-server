@@ -319,40 +319,44 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "deploy-metadata",
-        description: "Deploy metadata to Salesforce org with deployment monitoring",
+        description: "Deploy metadata components to Salesforce org",
         inputSchema: {
           type: "object",
           properties: {
-            zipFile: {
-              type: "string",
-              description: "Base64 encoded zip file containing metadata to deploy"
+            components: {
+              oneOf: [
+                {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", description: "Metadata type (e.g., ApexClass, CustomObject)" },
+                    fullName: { type: "string", description: "Component full name" },
+                    metadata: { type: "object", description: "Component metadata" }
+                  },
+                  required: ["type", "fullName", "metadata"],
+                  description: "Single metadata component"
+                },
+                {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string", description: "Metadata type (e.g., ApexClass, CustomObject)" },
+                      fullName: { type: "string", description: "Component full name" },
+                      metadata: { type: "object", description: "Component metadata" }
+                    },
+                    required: ["type", "fullName", "metadata"]
+                  },
+                  description: "Array of metadata components"
+                }
+              ],
+              description: "Metadata component(s) to deploy"
             },
             options: {
               type: "object",
               properties: {
-                allowMissingFiles: {
-                  type: "boolean",
-                  description: "Allow deployment with missing files"
-                },
-                autoUpdatePackage: {
-                  type: "boolean",
-                  description: "Auto-update package.xml"
-                },
                 checkOnly: {
                   type: "boolean",
                   description: "Validate deployment without saving changes"
-                },
-                ignoreWarnings: {
-                  type: "boolean",
-                  description: "Ignore warnings during deployment"
-                },
-                performRetrieve: {
-                  type: "boolean",
-                  description: "Perform retrieve after deployment"
-                },
-                purgeOnDelete: {
-                  type: "boolean",
-                  description: "Purge components on delete"
                 },
                 rollbackOnError: {
                   type: "boolean",
@@ -362,62 +366,60 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                   type: "array",
                   items: { type: "string" },
                   description: "Specific test classes to run"
-                },
-                singlePackage: {
-                  type: "boolean",
-                  description: "Deploy as single package"
                 }
               }
             }
           },
-          required: ["zipFile"]
+          required: ["components"]
         }
       },
       {
         name: "retrieve-metadata",
-        description: "Retrieve metadata from Salesforce org as base64 zip file",
+        description: "Retrieve metadata components from Salesforce org",
         inputSchema: {
           type: "object",
           properties: {
-            types: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: {
-                    type: "string",
-                    description: "Metadata type name (e.g., ApexClass, CustomObject)"
+            components: {
+              oneOf: [
+                {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", description: "Metadata type (e.g., ApexClass, CustomObject)" },
+                    fullName: { type: "string", description: "Component full name" }
                   },
-                  members: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Specific members to retrieve (use * for all)"
-                  }
+                  required: ["type", "fullName"],
+                  description: "Single metadata component identifier"
                 },
-                required: ["name", "members"]
-              },
-              description: "Metadata types and members to retrieve"
+                {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string", description: "Metadata type (e.g., ApexClass, CustomObject)" },
+                      fullName: { type: "string", description: "Component full name" }
+                    },
+                    required: ["type", "fullName"]
+                  },
+                  description: "Array of metadata component identifiers"
+                }
+              ],
+              description: "Metadata component(s) to retrieve"
             },
             options: {
               type: "object",
               properties: {
+                includeBody: {
+                  type: "boolean",
+                  description: "Include component body/source code (default: true)"
+                },
                 apiVersion: {
                   type: "string",
                   description: "API version to use for retrieval"
-                },
-                packageNames: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "Specific package names to retrieve"
-                },
-                singlePackage: {
-                  type: "boolean",
-                  description: "Retrieve as single package"
                 }
               }
             }
           },
-          required: ["types"]
+          required: ["components"]
         }
       },
       {

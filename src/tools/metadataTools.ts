@@ -169,7 +169,7 @@ export class MetadataTools {
     // Prepare the component data
     const componentData: any = {
       Name: fullName,
-      Body: metadata.body || metadata.Body || ''
+      Body: metadata.body || metadata.Body || metadata.content || ''
     };
     
     // Add type-specific fields
