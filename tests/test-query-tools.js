@@ -21,9 +21,9 @@ class MCPTester {
   async startServer() {
     console.log('🚀 Starting Salesforce MCP Server...');
     
-    this.serverProcess = spawn('node', [join(__dirname, 'build/index.js')], {
+    this.serverProcess = spawn('node', [join(__dirname, '../build/index.js')], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: __dirname
+      cwd: join(__dirname, '..')
     });
 
     // Wait for server to start

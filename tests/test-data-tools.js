@@ -25,7 +25,7 @@ async function testMCPTool(toolName, args) {
     console.log(`\n🧪 Testing ${toolName}...`);
     console.log(`📤 Input:`, JSON.stringify(args, null, 2));
     
-    const child = spawn('node', ['build/index.js'], {
+    const child = spawn('node', ['./build/index.js'], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
     

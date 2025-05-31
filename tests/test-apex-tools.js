@@ -56,7 +56,7 @@ async function testTool(test) {
     console.log(`\n🧪 Testing: ${test.name} - ${test.description}`);
     console.log(`📤 Input:`, JSON.stringify(test.input, null, 2));
     
-    const child = spawn('node', ['build/index.js'], {
+    const child = spawn('node', ['./build/index.js'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: true
     });

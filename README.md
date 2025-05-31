@@ -417,15 +417,23 @@ Retrieve individual metadata components or arrays of components.
 ## 🧪 Testing
 
 ```bash
-# Run all tests
-npm test
-
 # Test individual tools
-node tests/test-tools.js
-node tests/test-metadata-tools.js
-node tests/test-apex-tools.js
+node tests/test-query-tools.js
 node tests/test-data-tools.js
+node tests/test-apex-tools.js
+node tests/test-metadata-tools.js
 ```
+
+### Test Structure
+
+The test files are organized by functionality:
+
+- **test-query-tools.js**: Tests basic connection and query tools (test-connection, execute-soql, execute-sosl, describe-sobject)
+- **test-data-tools.js**: Tests data management tools (create-record, get-record, update-record, delete-record, upsert-record)
+- **test-apex-tools.js**: Tests Apex development tools (execute-apex, run-apex-tests, get-apex-logs)
+- **test-metadata-tools.js**: Tests metadata tools (list-metadata-types, deploy-metadata, retrieve-metadata)
+
+Each test file creates its own server instance, sends requests to test specific tools, and validates the responses.
 
 ## 🤝 Contributing
 
