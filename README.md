@@ -1,6 +1,6 @@
 # Salesforce MCP Server
 
-A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools like Claude Desktop, GitHub Copilot, and other MCP-compatible clients.
+A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools like Claude Desktop, Cline, and other MCP-compatible clients.
 
 ## ⚠️ Current Status & Disclaimer
 
@@ -58,7 +58,7 @@ Thank you for helping improve this tool!
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/salesforce-mcp-server.git
+git clone https://github.com/jaworjar95/salesforce-mcp-server.git
 cd salesforce-mcp-server
 
 # Install dependencies
@@ -89,17 +89,21 @@ SF_INSTANCE_URL=https://yourorg.my.salesforce.com
 SF_API_VERSION=63.0
 ```
 
-## 🔧 Claude Desktop Configuration
+## 🔧 MCP Client Configuration
+
+This server supports multiple MCP clients. Choose the configuration that matches your preferred client:
+
+### Claude Desktop Configuration
 
 Add the following to your Claude Desktop MCP settings file:
 
-### Windows
+#### Windows
 Location: `%APPDATA%\Claude\claude_desktop_config.json`
 
-### macOS
+#### macOS
 Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-### Configuration
+#### Configuration
 
 ```json
 {
@@ -115,7 +119,7 @@ Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
         "SF_API_VERSION": "63.0"
       },
       "disabled": false,
-      "autoApprove": [
+      "alwaysAllow": [
         "test-connection",
         "execute-soql",
         "describe-sobject"
@@ -125,7 +129,7 @@ Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
 }
 ```
 
-### OAuth2 Configuration (Alternative)
+#### OAuth2 Configuration (Alternative)
 
 ```json
 {
@@ -143,6 +147,138 @@ Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
   }
 }
 ```
+
+### Cline Configuration
+
+Cline (VS Code extension) provides advanced MCP server management capabilities.
+
+#### Configuration Location
+
+Cline stores MCP server configurations in:
+- **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+- **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+
+#### Basic Configuration
+
+```json
+{
+  "mcpServers": {
+    "salesforce": {
+      "command": "node",
+      "args": ["path/to/salesforce-mcp-server/build/index.js"],
+      "env": {
+        "SF_USERNAME": "your-username@company.com",
+        "SF_PASSWORD": "your-password",
+        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_LOGIN_URL": "https://login.salesforce.com",
+        "SF_API_VERSION": "63.0"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ]
+    }
+  }
+}
+```
+
+#### Enhanced Configuration with Network Timeout
+
+```json
+{
+  "mcpServers": {
+    "salesforce": {
+      "command": "node",
+      "args": ["path/to/salesforce-mcp-server/build/index.js"],
+      "env": {
+        "SF_USERNAME": "your-username@company.com",
+        "SF_PASSWORD": "your-password",
+        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_LOGIN_URL": "https://login.salesforce.com",
+        "SF_API_VERSION": "63.0"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ],
+      "networkTimeout": 60
+    }
+  }
+}
+```
+
+#### OAuth2 Configuration for Cline
+
+```json
+{
+  "mcpServers": {
+    "salesforce": {
+      "command": "node",
+      "args": ["path/to/salesforce-mcp-server/build/index.js"],
+      "env": {
+        "SF_CLIENT_ID": "your-oauth2-client-id",
+        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
+        "SF_REFRESH_TOKEN": "your-refresh-token",
+        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ],
+      "networkTimeout": 60
+    }
+  }
+}
+```
+
+#### Tool Safety Levels
+
+**✅ Safe for Auto-Approval (`alwaysAllow`)**
+- `test-connection` - Connection validation (read-only)
+- `execute-soql` - SOQL queries (read-only)
+- `describe-sobject` - Metadata inspection (read-only)
+- `get-record` - Single record retrieval (read-only)
+- `get-apex-logs` - Debug log access (read-only)
+- `list-metadata-types` - Metadata type discovery (read-only)
+
+**⚠️ Requires Manual Approval**
+- `create-record`, `update-record`, `delete-record`, `upsert-record` - Data modification
+- `deploy-metadata` - Metadata deployment
+- `execute-apex`, `run-apex-tests` - Code execution
+- `execute-sosl` - Search operations (can be resource-intensive)
+- `retrieve-metadata` - Metadata retrieval (can be large)
+
+#### Usage in Cline
+
+1. Install the Cline VS Code extension
+2. Configure the MCP server as shown above
+3. Restart VS Code
+4. Open Cline and start using Salesforce tools in your conversations
+
+#### Troubleshooting Cline Integration
+
+**Common Issues:**
+- **Server Not Responding**: Check if Node.js is installed and the build directory exists
+- **Permission Errors**: Verify Salesforce credentials in environment variables
+- **Tool Not Available**: Ensure the server is enabled and not disabled in Cline settings
+- **Connection Failures**: Verify login URL (use `https://test.salesforce.com` for sandboxes) and your sf credentials
+- **Build Errors**: Run `npm run build` to ensure the server is properly compiled
 
 ## 📖 Tool Documentation
 
@@ -316,3 +452,4 @@ Part of this implementation was developed with assistance from Claude Sonnet 4 u
 - [Model Context Protocol](https://github.com/modelcontextprotocol) - The protocol this server implements
 - [jsforce](https://github.com/jsforce/jsforce) - Salesforce API library used in this project
 - [Claude Desktop](https://claude.ai/desktop) - AI assistant that supports MCP servers
+- [Cline](https://github.com/saoudrizwan/claude-dev) - VS Code extension for AI-assisted development
