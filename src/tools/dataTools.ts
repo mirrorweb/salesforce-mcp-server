@@ -38,12 +38,10 @@ export class DataTools {
       // Use standard API for smaller operations
       let result;
       if (isArray) {
-        // Multiple records via standard API
         result = await conn.sobject(sobjectType).create(records, {
           allOrNone: options?.allOrNone ?? false
         });
       } else {
-        // Single record
         result = await conn.sobject(sobjectType).create(recordData);
       }
       
@@ -170,12 +168,10 @@ export class DataTools {
       // Use standard API for smaller operations
       let result;
       if (isArray) {
-        // Multiple records via standard API
         result = await conn.sobject(sobjectType).update(records, {
           allOrNone: options?.allOrNone ?? false
         });
       } else {
-        // Single record
         result = await conn.sobject(sobjectType).update(recordData);
       }
       
@@ -229,10 +225,8 @@ export class DataTools {
       // Use standard API for smaller operations
       let result;
       if (ids.length === 1) {
-        // Single record
         result = await conn.sobject(sobjectType).destroy(ids[0]);
       } else {
-        // Multiple records
         result = await conn.sobject(sobjectType).destroy(ids, {
           allOrNone: options?.allOrNone ?? false
         });
@@ -290,12 +284,10 @@ export class DataTools {
       // Use standard API for smaller operations
       let result;
       if (isArray) {
-        // Multiple records via standard API
         result = await conn.sobject(sobjectType).upsert(records, externalIdField, {
           allOrNone: options?.allOrNone ?? false
         });
       } else {
-        // Single record
         result = await conn.sobject(sobjectType).upsert(recordData, externalIdField);
       }
       
@@ -480,7 +472,6 @@ export class DataTools {
   }
 }
 
-// Zod schemas for validation
 export const CreateRecordSchema = z.object({
   sobjectType: z.string().min(1, 'SObject type is required'),
   recordData: z.union([z.record(z.any()), z.array(z.record(z.any()))]),

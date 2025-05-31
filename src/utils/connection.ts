@@ -5,7 +5,7 @@ export class ConnectionManager {
   private static instance: Connection | null = null;
   private static authManager = new AuthManager();
   private static lastHealthCheck = 0;
-  private static readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  private static readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
 
   static async getConnection(): Promise<Connection> {
     if (!this.instance || this.needsHealthCheck()) {
@@ -53,14 +53,13 @@ export class ConnectionManager {
     // Handle connection errors
     connection.on('error', (error: Error) => {
       console.error('[ConnectionManager] Connection error:', error);
-      this.instance = null; // Force reconnection on next request
+      this.instance = null;
     });
   }
 
   static async closeConnection(): Promise<void> {
     if (this.instance) {
       console.error('[ConnectionManager] Closing Salesforce connection...');
-      // jsforce doesn't have an explicit close method, just clear the instance
       this.instance = null;
       this.lastHealthCheck = 0;
     }

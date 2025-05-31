@@ -87,7 +87,6 @@ export class MetadataTools {
               break;
               
             default:
-              // Try generic metadata deployment for unknown types
               result = await this.deployGenericMetadata(conn, component, deployOptions);
               break;
           }
@@ -184,7 +183,7 @@ export class MetadataTools {
       if (existing && existing.length > 0) {
         // Update existing
         const updateData = { ...componentData };
-        delete updateData.Name; // Don't update the name
+        delete updateData.Name;
         const result = await tooling.sobject(type).update({ Id: existing[0].Id, ...updateData });
         return { id: existing[0].Id, success: (result as any).success, action: 'updated' };
       } else {
@@ -514,7 +513,6 @@ export class MetadataTools {
   }
 }
 
-// Zod schemas for tool validation
 export const deployMetadataSchema = z.object({
   components: z.union([
     z.array(z.object({

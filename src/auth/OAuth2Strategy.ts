@@ -26,10 +26,10 @@ export class OAuth2Strategy implements AuthStrategy {
         oauth2: {
           clientId: config.clientId!,
           clientSecret: config.clientSecret,
-          redirectUri: 'http://localhost:3000/callback' // Not used for refresh token flow
+          redirectUri: 'http://localhost:3000/callback'
         },
         instanceUrl: config.instanceUrl,
-        accessToken: undefined, // Will be set by refresh
+        accessToken: undefined,
         refreshToken: config.refreshToken,
         version: config.apiVersion
       });
