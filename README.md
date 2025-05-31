@@ -36,6 +36,7 @@ Thank you for helping improve this tool!
 - **`upsert-record`** - External ID-based upsert operations
 
 #### 🔧 Metadata Tools (Component-Based)
+**⚠️ Beta Status**: These tools are currently in beta and may not work for all metadata types.
 - **`list-metadata-types`** - Discover metadata types
 - **`deploy-metadata`** - Deploy individual metadata components (e.g., ApexClass, CustomObject)
 - **`retrieve-metadata`** - Retrieve individual metadata components
