@@ -4,6 +4,7 @@
  */
 
 const { spawn } = require('child_process');
+const path = require('path');
 
 // Test configuration
 const tests = [
@@ -58,6 +59,7 @@ async function testTool(test) {
     
     const child = spawn('node', ['./build/index.js'], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: path.join(process.cwd(), 'salesforce-mcp-server'),
       shell: true
     });
     

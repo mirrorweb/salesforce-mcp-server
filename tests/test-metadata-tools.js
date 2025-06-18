@@ -27,7 +27,7 @@ async function executeTool(toolName, args = {}) {
 
     const child = spawn('node', ['./build/index.js'], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: process.cwd()
+      cwd: path.join(process.cwd(), 'salesforce-mcp-server')
     });
 
     let stdout = '';
@@ -123,7 +123,7 @@ function createTestRetrievalComponents() {
   return [
     {
       type: 'ApexClass',
-      fullName: 'Account'  // Using a standard class that should exist
+      fullName: 'HelloWorld'
     }
   ];
 }
@@ -301,18 +301,20 @@ async function runMetadataTests() {
     results.tests.push({ name: 'deploy-single-metadata', status: 'FAILED', error: error.message });
   }
 
-  // Test 5: Retrieve Single Metadata Component
+  // Test 5: Retrieve Single Metadata Component and Save
   try {
-    console.log('\n📥 Test 5: Retrieve Single Metadata Component');
+    console.log('\n📥 Test 5: Retrieve Single Metadata Component and Save');
     const singleComponent = {
       type: 'ApexClass',
-      fullName: 'Account'  // Using a standard class that should exist
+      fullName: 'HelloWorld'
     };
+    const savePath = './retrieved-metadata';
     
     const result = await executeTool('retrieve-metadata', {
-      components: singleComponent,  // Single component, not array
+      components: singleComponent,
       options: {
-        includeBody: true
+        includeBody: true,
+        savePath: savePath
       }
     });
     
@@ -322,15 +324,53 @@ async function runMetadataTests() {
       console.log(`📊 Components Retrieved: ${data.data.componentsRetrieved}/${data.data.componentsTotal}`);
       console.log(`✅ Success Rate: ${data.data.success ? 'SUCCESS' : 'PARTIAL/FAILED'}`);
       
+      // Verify file was saved
+      const expectedPath = path.join('salesforce-mcp-server', savePath, 'classes', 'HelloWorld.cls');
+      if (fs.existsSync(expectedPath)) {
+        console.log(`✅ File saved to: ${expectedPath}`);
+        fs.rmSync(savePath, { recursive: true, force: true }); // Clean up
+      } else {
+        throw new Error(`File not saved to ${expectedPath}`);
+      }
+      
       results.passed++;
-      results.tests.push({ name: 'retrieve-single-metadata', status: 'PASSED', details: `Single component retrieval ${data.data.success ? 'succeeded' : 'failed'}` });
+      results.tests.push({ name: 'retrieve-single-metadata-and-save', status: 'PASSED', details: `Single component retrieval and save ${data.data.success ? 'succeeded' : 'failed'}` });
     } else {
       throw new Error('Invalid response format');
     }
   } catch (error) {
     console.log(`❌ Failed: ${error.message}`);
     results.failed++;
-    results.tests.push({ name: 'retrieve-single-metadata', status: 'FAILED', error: error.message });
+    results.tests.push({ name: 'retrieve-single-metadata-and-save', status: 'FAILED', error: error.message });
+  }
+
+  // Test 6: Deploy Bundle
+  try {
+    console.log('\n📤 Test 6: Deploy Bundle');
+    const bundlePath = './tests/test-files/force-app/main/default/lwc/helloWorld';
+    
+    const result = await executeTool('deploy-bundle', {
+      bundlePath: bundlePath
+    });
+    
+    if (result && result.content && result.content[0]) {
+      const data = JSON.parse(result.content[0].text);
+      console.log(`✅ Success: Bundle deployment completed`);
+      console.log(`📊 Deployment Status: ${data.data.status}`);
+      
+      if (data.data.success) {
+        results.passed++;
+        results.tests.push({ name: 'deploy-bundle', status: 'PASSED', details: `Bundle deployment succeeded` });
+      } else {
+        throw new Error(`Bundle deployment failed: ${data.data.status}`);
+      }
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error) {
+    console.log(`❌ Failed: ${error.message}`);
+    results.failed++;
+    results.tests.push({ name: 'deploy-bundle', status: 'FAILED', error: error.message });
   }
 
   // Test Summary

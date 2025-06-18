@@ -6,6 +6,7 @@
  */
 
 const { spawn } = require('child_process');
+const path = require('path');
 
 // Test data for creating records
 const testAccountData = {
@@ -26,7 +27,8 @@ async function testMCPTool(toolName, args) {
     console.log(`📤 Input:`, JSON.stringify(args, null, 2));
     
     const child = spawn('node', ['./build/index.js'], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: path.join(process.cwd(), 'salesforce-mcp-server')
     });
     
     let stdout = '';

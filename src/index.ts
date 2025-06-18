@@ -347,9 +347,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                     required: ["type", "fullName", "metadata"]
                   },
                   description: "Array of metadata components"
+                },
+                {
+                  type: "object",
+                  properties: {
+                    filePaths: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Array of file paths to deploy"
+                    }
+                  },
+                  required: ["filePaths"],
+                  description: "File paths to deploy"
                 }
               ],
-              description: "Metadata component(s) to deploy"
+              description: "Metadata component(s) or file paths to deploy"
             },
             options: {
               type: "object",
@@ -434,6 +446,52 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             }
           },
           required: []
+        }
+      },
+      {
+        name: "deploy-bundle",
+        description: "Deploy a metadata bundle (e.g., LWC) from a directory path",
+        inputSchema: {
+          type: "object",
+          properties: {
+            bundlePath: {
+              type: "string",
+              description: "Path to the directory to be deployed as a bundle"
+            },
+            options: {
+              type: "object",
+              properties: {
+                checkOnly: {
+                  type: "boolean",
+                  description: "Validate deployment without saving changes"
+                },
+                rollbackOnError: {
+                  type: "boolean",
+                  description: "Rollback all changes on any error"
+                },
+                runTests: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Specific test classes to run"
+                }
+              }
+            }
+          },
+          required: ["bundlePath"]
+        }
+      },
+      {
+        name: "check-deploy-status",
+        description: "Check the status of a deployment",
+        inputSchema: {
+          type: "object",
+          properties: {
+            deployId: {
+              type: "string",
+              description: "The ID of the deployment to check"
+            }
+          },
+          required: ["deployId"]
         }
       }
     ]
@@ -544,6 +602,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await MetadataTools.listMetadataTypes(args.apiVersion);
     }
     
+    case "deploy-bundle": {
+      const args = request.params.arguments as { bundlePath: string; options?: any };
+      return await MetadataTools.deployBundle(args.bundlePath, args.options);
+    }
+    
+    case "check-deploy-status": {
+      const args = request.params.arguments as { deployId: string };
+      return await MetadataTools.checkDeployStatus(args.deployId);
+    }
+
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);
   }

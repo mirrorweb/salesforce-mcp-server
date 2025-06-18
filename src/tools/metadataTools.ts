@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { Connection } from 'jsforce';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import archiver from 'archiver';
+import { PassThrough } from 'stream';
 import { ConnectionManager } from '../utils/connection.js';
 import { SalesforceErrorHandler, SalesforceErrorContext } from '../utils/errors.js';
 
@@ -24,7 +28,7 @@ export class MetadataTools {
       type: string;
       fullName: string;
       metadata: any;
-    },
+    } | { filePaths: string[] },
     options?: {
       checkOnly?: boolean;
       rollbackOnError?: boolean;
@@ -38,8 +42,25 @@ export class MetadataTools {
       
       const conn = await ConnectionManager.getConnection();
       
-      // Normalize input to array
-      const componentArray = Array.isArray(components) ? components : [components];
+      let componentArray: any[] = [];
+
+      if ('filePaths' in components) {
+        console.error('[MetadataTools] Deploying from file paths:', components.filePaths);
+        for (const filePath of components.filePaths) {
+          const content = await fs.readFile(filePath, 'utf-8');
+          const type = path.basename(path.dirname(filePath)); // e.g., classes, objects
+          const fullName = path.basename(filePath, path.extname(filePath));
+          componentArray.push({
+            type: this.mapFileTypeToMetadataType(type),
+            fullName,
+            metadata: { body: content }
+          });
+        }
+      } else {
+        // Normalize input to array
+        componentArray = Array.isArray(components) ? components : [components];
+      }
+      
       console.error('[MetadataTools] Components to deploy:', componentArray.length);
       
       const deployOptions = {
@@ -77,11 +98,18 @@ export class MetadataTools {
               result = await this.deployCustomField(conn, component, deployOptions);
               break;
               
+            case 'FlexiPage':
+              result = await this.deployFlexiPage(conn, component, deployOptions);
+              break;
+              
+            case 'CustomTab':
+              result = await this.deployCustomTab(conn, component, deployOptions);
+              break;
+              
             case 'ValidationRule':
             case 'WorkflowRule':
             case 'Flow':
             case 'CustomLabel':
-            case 'CustomTab':
             case 'CustomApplication':
               result = await this.deployGenericMetadata(conn, component, deployOptions);
               break;
@@ -238,6 +266,46 @@ export class MetadataTools {
   }
 
   /**
+   * Deploy FlexiPage using Metadata API
+   */
+  private static async deployFlexiPage(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName, metadata } = component;
+    
+    if (options.checkOnly) {
+      console.error(`[MetadataTools] Check-only mode for FlexiPage: ${fullName}`);
+      return { success: true, checkOnly: true };
+    }
+    
+    try {
+      const result = await conn.metadata.upsert('FlexiPage', [metadata]);
+      const resultItem = Array.isArray(result) ? result[0] : result;
+      return { success: resultItem.success, id: resultItem.fullName, action: 'upserted' };
+    } catch (error) {
+      throw new Error(`Failed to deploy FlexiPage ${fullName}: ${error}`);
+    }
+  }
+
+  /**
+   * Deploy CustomTab using Metadata API
+   */
+  private static async deployCustomTab(conn: Connection, component: any, options: any): Promise<any> {
+    const { fullName, metadata } = component;
+    
+    if (options.checkOnly) {
+      console.error(`[MetadataTools] Check-only mode for CustomTab: ${fullName}`);
+      return { success: true, checkOnly: true };
+    }
+    
+    try {
+      const result = await conn.metadata.upsert('CustomTab', [metadata]);
+      const resultItem = Array.isArray(result) ? result[0] : result;
+      return { success: resultItem.success, id: resultItem.fullName, action: 'upserted' };
+    } catch (error) {
+      throw new Error(`Failed to deploy CustomTab ${fullName}: ${error}`);
+    }
+  }
+
+  /**
    * Deploy generic metadata using Metadata API
    */
   private static async deployGenericMetadata(conn: Connection, component: any, options: any): Promise<any> {
@@ -294,6 +362,92 @@ export class MetadataTools {
     }
   }
 
+  private static mapFileTypeToMetadataType(fileType: string): string {
+    const mapping: { [key: string]: string } = {
+      classes: 'ApexClass',
+      triggers: 'ApexTrigger',
+      components: 'ApexComponent',
+      pages: 'ApexPage',
+      objects: 'CustomObject',
+      fields: 'CustomField',
+      validationRules: 'ValidationRule',
+      workflows: 'WorkflowRule',
+      flows: 'Flow',
+      labels: 'CustomLabel',
+      tabs: 'CustomTab',
+      applications: 'CustomApplication',
+      permissionsets: 'PermissionSet',
+      permissionsetgroups: 'PermissionSetGroup',
+      customMetadata: 'CustomMetadata',
+      email: 'EmailTemplate',
+      layouts: 'Layout',
+      flexipages: 'FlexiPage'
+    };
+    return mapping[fileType] || fileType;
+  }
+
+  static async checkDeployStatus(deployId: string): Promise<any> {
+    const context = SalesforceErrorHandler.createContext('check-deploy-status', 'deployment-status');
+    try {
+      console.error(`[MetadataTools] Checking deployment status for ID: ${deployId}`);
+      const conn = await ConnectionManager.getConnection();
+      const result = await conn.metadata.checkDeployStatus(deployId, true);
+      return SalesforceErrorHandler.formatSuccess(result, context);
+    } catch (error) {
+      console.error('[MetadataTools] Failed to check deployment status:', error);
+      return SalesforceErrorHandler.formatError(error, context);
+    }
+  }
+
+  static async deployBundle(
+    bundlePath: string,
+    options?: {
+      checkOnly?: boolean;
+      rollbackOnError?: boolean;
+      runTests?: string[];
+    }
+  ): Promise<any> {
+    const context = SalesforceErrorHandler.createContext('deploy-bundle', 'bundle-deployment');
+    try {
+      console.error(`[MetadataTools] Starting bundle deployment from path: ${bundlePath}`);
+      const conn = await ConnectionManager.getConnection();
+      const apiVersion = conn.version;
+      const componentName = path.basename(bundlePath);
+
+      const packageXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>${componentName}</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <version>${apiVersion}</version>
+</Package>`;
+
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      const streamPassThrough = new PassThrough();
+      archive.pipe(streamPassThrough);
+
+      archive.append(packageXml, { name: 'package.xml' });
+      archive.directory(bundlePath, `lwc/${componentName}`);
+      await archive.finalize();
+
+      const deployOptions = {
+        checkOnly: options?.checkOnly ?? false,
+        rollbackOnError: options?.rollbackOnError ?? true,
+        runTests: options?.runTests ?? [],
+        singlePackage: true,
+      };
+
+      const deployResult = await conn.metadata.deploy(streamPassThrough, deployOptions).complete();
+      
+      return SalesforceErrorHandler.formatSuccess(deployResult, context);
+
+    } catch (error) {
+      console.error('[MetadataTools] Bundle deployment failed:', error);
+      return SalesforceErrorHandler.formatError(error, context);
+    }
+  }
+
   /**
    * Retrieve individual metadata components from Salesforce org
    * Returns components as JSON objects instead of zip files
@@ -309,6 +463,7 @@ export class MetadataTools {
     options?: {
       includeBody?: boolean;
       apiVersion?: string;
+      savePath?: string;
     }
   ): Promise<any> {
     const context = SalesforceErrorHandler.createContext('retrieve-metadata', 'metadata-retrieval');
@@ -324,7 +479,8 @@ export class MetadataTools {
       
       const retrieveOptions = {
         includeBody: options?.includeBody ?? true,
-        apiVersion: options?.apiVersion ?? conn.version
+        apiVersion: options?.apiVersion ?? conn.version,
+        savePath: options?.savePath
       };
 
       const results = [];
@@ -365,6 +521,14 @@ export class MetadataTools {
             success: true,
             metadata: result
           });
+
+          if (retrieveOptions.savePath) {
+            const saveDir = path.join(retrieveOptions.savePath, this.getDirectoryForMetadataType(component.type));
+            await fs.mkdir(saveDir, { recursive: true });
+            const filePath = path.join(saveDir, `${component.fullName}.${this.getExtensionForMetadataType(component.type)}`);
+            await fs.writeFile(filePath, JSON.stringify(result, null, 2));
+            console.error(`[MetadataTools] Saved ${component.type} ${component.fullName} to ${filePath}`);
+          }
           
         } catch (error) {
           console.error(`[MetadataTools] Failed to retrieve ${component.type}: ${component.fullName}`, error);
@@ -511,6 +675,54 @@ export class MetadataTools {
       return SalesforceErrorHandler.formatError(error, context);
     }
   }
+
+  private static getDirectoryForMetadataType(metadataType: string): string {
+    const mapping: { [key: string]: string } = {
+      ApexClass: 'classes',
+      ApexTrigger: 'triggers',
+      ApexComponent: 'components',
+      ApexPage: 'pages',
+      CustomObject: 'objects',
+      CustomField: 'fields',
+      ValidationRule: 'validationRules',
+      WorkflowRule: 'workflows',
+      Flow: 'flows',
+      CustomLabel: 'labels',
+      CustomTab: 'tabs',
+      CustomApplication: 'applications',
+      PermissionSet: 'permissionsets',
+      PermissionSetGroup: 'permissionsetgroups',
+      CustomMetadata: 'customMetadata',
+      EmailTemplate: 'email',
+      Layout: 'layouts',
+      FlexiPage: 'FlexiPage'
+    };
+    return mapping[metadataType] || metadataType.toLowerCase() + 's';
+  }
+
+  private static getExtensionForMetadataType(metadataType: string): string {
+    const mapping: { [key: string]: string } = {
+      ApexClass: 'cls',
+      ApexTrigger: 'trigger',
+      ApexComponent: 'component',
+      ApexPage: 'page',
+      CustomObject: 'object-meta.xml',
+      CustomField: 'field-meta.xml',
+      ValidationRule: 'validationRule-meta.xml',
+      WorkflowRule: 'workflow-meta.xml',
+      Flow: 'flow-meta.xml',
+      CustomLabel: 'labels-meta.xml',
+      CustomTab: 'tab-meta.xml',
+      CustomApplication: 'app-meta.xml',
+      PermissionSet: 'permissionset-meta.xml',
+      PermissionSetGroup: 'permissionsetgroup-meta.xml',
+      CustomMetadata: 'md-meta.xml',
+      EmailTemplate: 'email',
+      Layout: 'layout-meta.xml',
+      FlexiPage: 'flexipage-meta.xml'
+    };
+    return mapping[metadataType] || 'xml';
+  }
 }
 
 export const deployMetadataSchema = z.object({
@@ -524,8 +736,11 @@ export const deployMetadataSchema = z.object({
       type: z.string().describe('Metadata type (e.g., ApexClass, CustomObject, CustomField)'),
       fullName: z.string().describe('Full name of the component'),
       metadata: z.any().describe('Metadata definition object')
+    }),
+    z.object({
+      filePaths: z.array(z.string()).describe('Array of file paths to deploy')
     })
-  ]).describe('Single component or array of components to deploy'),
+  ]).describe('Single component, array of components, or file paths to deploy'),
   options: z.object({
     checkOnly: z.boolean().optional().describe('Validate deployment without saving changes'),
     rollbackOnError: z.boolean().optional().describe('Rollback all changes on any error'),
@@ -546,10 +761,24 @@ export const retrieveMetadataSchema = z.object({
   ]).describe('Single component or array of components to retrieve'),
   options: z.object({
     includeBody: z.boolean().optional().describe('Include component body/source code'),
-    apiVersion: z.string().optional().describe('API version to use for retrieval')
+    apiVersion: z.string().optional().describe('API version to use for retrieval'),
+    savePath: z.string().optional().describe('Directory path to save the retrieved files')
   }).optional().describe('Retrieval options')
 });
 
 export const listMetadataTypesSchema = z.object({
   apiVersion: z.string().optional().describe('API version to use for listing metadata types')
+});
+
+export const checkDeployStatusSchema = z.object({
+  deployId: z.string().describe('The ID of the deployment to check')
+});
+
+export const deployBundleSchema = z.object({
+  bundlePath: z.string().describe('Path to the directory to be deployed as a bundle'),
+  options: z.object({
+    checkOnly: z.boolean().optional().describe('Validate deployment without saving changes'),
+    rollbackOnError: z.boolean().optional().describe('Rollback all changes on any error'),
+    runTests: z.array(z.string()).optional().describe('Specific test classes to run')
+  }).optional().describe('Deployment options')
 });

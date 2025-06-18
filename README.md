@@ -2,21 +2,9 @@
 
 A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools like Claude Desktop, Cline, and other MCP-compatible clients.
 
-## ⚠️ Current Status & Disclaimer
-
-**This server is currently in a testing and development phase.**
-
-While it offers a comprehensive set of tools for Salesforce integration, please be cautious when using it, especially with production Salesforce orgs. Thorough testing has been conducted, but unexpected issues may still arise.
-
-**Feedback & Issue Reporting:**
-Your feedback is highly valuable! If you encounter any issues or have suggestions for improvement:
-- **GitHub Issues**: Please submit an issue ticket on the project's GitHub repository.
-
-Thank you for helping improve this tool!
-
 ## 🚀 Features
 
-### 15 Comprehensive Tools
+### 17 Comprehensive Tools
 
 #### 🔍 Query & Search Tools
 - **`execute-soql`** - Execute SOQL queries with auto-bulk switching and pagination
@@ -36,13 +24,37 @@ Thank you for helping improve this tool!
 - **`upsert-record`** - External ID-based upsert operations
 
 #### 🔧 Metadata Tools (Component-Based)
-**⚠️ Beta Status**: These tools are currently in beta and may not work for all metadata types.
 - **`list-metadata-types`** - Discover metadata types
-- **`deploy-metadata`** - Deploy individual metadata components (e.g., ApexClass, CustomObject)
-- **`retrieve-metadata`** - Retrieve individual metadata components
+- **`deploy-metadata`** - Deploy individual metadata components (e.g., ApexClass, CustomObject) from files or JSON
+- **`deploy-bundle`** - Deploy a metadata bundle (e.g., LWC) from a directory path
+- **`retrieve-metadata`** - Retrieve individual metadata components, with an option to save to a file
+- **`check-deploy-status`** - Check the status of a deployment
 
 #### 🔗 Connection Tools
 - **`test-connection`** - Connection validation and health monitoring
+
+### Supported Metadata Types
+
+The `deploy-metadata` tool supports the following metadata types:
+
+-   `ApexClass`
+-   `ApexTrigger`
+-   `ApexComponent`
+-   `ApexPage`
+-   `CustomObject`
+-   `CustomField`
+-   `ValidationRule`
+-   `WorkflowRule`
+-   `Flow`
+-   `CustomLabel`
+-   `CustomTab`
+-   `CustomApplication`
+-   `PermissionSet`
+-   `PermissionSetGroup`
+-   `CustomMetadata`
+-   `EmailTemplate`
+-   `Layout`
+-   `FlexiPage`
 
 ### Key Capabilities
 
@@ -93,163 +105,67 @@ SF_REFRESH_TOKEN=your-refresh-token
 SF_INSTANCE_URL=https://yourorg.my.salesforce.com
 
 # Optional Configuration
-SF_API_VERSION=63.0
+SF_API_VERSION=64.0
 ```
 
 ## 🔧 MCP Client Configuration
 
-This server supports multiple MCP clients. Choose the configuration that matches your preferred client:
+To use this server with an MCP client like Cline or Claude Desktop, add the following configuration to your client's settings file.
 
-### Claude Desktop Configuration
+### Configuration Examples
 
-Add the following to your Claude Desktop MCP settings file:
+Choose one of the following authentication methods and add the corresponding JSON object to the `mcpServers` section of your settings file.
 
-#### Windows
-Location: `%APPDATA%\Claude\claude_desktop_config.json`
-
-#### macOS
-Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-#### Configuration
+**1. Username/Password Authentication**
 
 ```json
 {
-  "mcpServers": {
-    "salesforce": {
-      "command": "node",
-      "args": ["path/to/salesforce-mcp-server/build/index.js"],
-      "env": {
-        "SF_USERNAME": "your-username@company.com",
-        "SF_PASSWORD": "your-password",
-        "SF_SECURITY_TOKEN": "your-security-token",
-        "SF_LOGIN_URL": "https://login.salesforce.com",
-        "SF_API_VERSION": "63.0"
-      },
-      "disabled": false,
-      "alwaysAllow": [
-        "test-connection",
-        "execute-soql",
-        "describe-sobject"
-      ]
-    }
+  "salesforce": {
+    "command": "node",
+    "args": ["/path/to/your/salesforce-mcp-server/build/index.js"],
+    "env": {
+      "SF_USERNAME": "your-username@company.com",
+      "SF_PASSWORD": "your-password",
+      "SF_SECURITY_TOKEN": "your-security-token",
+      "SF_LOGIN_URL": "https://login.salesforce.com",
+      "SF_API_VERSION": "64.0"
+    },
+    "disabled": false,
+    "alwaysAllow": [
+      "test-connection",
+      "execute-soql",
+      "describe-sobject",
+      "get-record",
+      "get-apex-logs",
+      "list-metadata-types"
+    ]
   }
 }
 ```
 
-#### OAuth2 Configuration (Alternative)
+**2. OAuth 2.0 Authentication**
 
 ```json
 {
-  "mcpServers": {
-    "salesforce": {
-      "command": "node",
-      "args": ["path/to/salesforce-mcp-server/build/index.js"],
-      "env": {
-        "SF_CLIENT_ID": "your-oauth2-client-id",
-        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
-        "SF_REFRESH_TOKEN": "your-refresh-token",
-        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
-      }
-    }
-  }
-}
-```
-
-### Cline Configuration
-
-Cline (VS Code extension) provides advanced MCP server management capabilities.
-
-#### Configuration Location
-
-Cline stores MCP server configurations in:
-- **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
-- **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
-- **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
-
-#### Basic Configuration
-
-```json
-{
-  "mcpServers": {
-    "salesforce": {
-      "command": "node",
-      "args": ["path/to/salesforce-mcp-server/build/index.js"],
-      "env": {
-        "SF_USERNAME": "your-username@company.com",
-        "SF_PASSWORD": "your-password",
-        "SF_SECURITY_TOKEN": "your-security-token",
-        "SF_LOGIN_URL": "https://login.salesforce.com",
-        "SF_API_VERSION": "63.0"
-      },
-      "disabled": false,
-      "alwaysAllow": [
-        "test-connection",
-        "execute-soql",
-        "describe-sobject",
-        "get-record",
-        "get-apex-logs",
-        "list-metadata-types"
-      ]
-    }
-  }
-}
-```
-
-#### Enhanced Configuration with Network Timeout
-
-```json
-{
-  "mcpServers": {
-    "salesforce": {
-      "command": "node",
-      "args": ["path/to/salesforce-mcp-server/build/index.js"],
-      "env": {
-        "SF_USERNAME": "your-username@company.com",
-        "SF_PASSWORD": "your-password",
-        "SF_SECURITY_TOKEN": "your-security-token",
-        "SF_LOGIN_URL": "https://login.salesforce.com",
-        "SF_API_VERSION": "63.0"
-      },
-      "disabled": false,
-      "alwaysAllow": [
-        "test-connection",
-        "execute-soql",
-        "describe-sobject",
-        "get-record",
-        "get-apex-logs",
-        "list-metadata-types"
-      ],
-      "networkTimeout": 60
-    }
-  }
-}
-```
-
-#### OAuth2 Configuration for Cline
-
-```json
-{
-  "mcpServers": {
-    "salesforce": {
-      "command": "node",
-      "args": ["path/to/salesforce-mcp-server/build/index.js"],
-      "env": {
-        "SF_CLIENT_ID": "your-oauth2-client-id",
-        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
-        "SF_REFRESH_TOKEN": "your-refresh-token",
-        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
-      },
-      "disabled": false,
-      "alwaysAllow": [
-        "test-connection",
-        "execute-soql",
-        "describe-sobject",
-        "get-record",
-        "get-apex-logs",
-        "list-metadata-types"
-      ],
-      "networkTimeout": 60
-    }
+  "salesforce": {
+    "command": "node",
+    "args": ["/path/to/your/salesforce-mcp-server/build/index.js"],
+    "env": {
+      "SF_CLIENT_ID": "your-oauth2-client-id",
+      "SF_CLIENT_SECRET": "your-oauth2-client-secret",
+      "SF_REFRESH_TOKEN": "your-refresh-token",
+      "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com",
+      "SF_API_VERSION": "64.0"
+    },
+    "disabled": false,
+    "alwaysAllow": [
+      "test-connection",
+      "execute-soql",
+      "describe-sobject",
+      "get-record",
+      "get-apex-logs",
+      "list-metadata-types"
+    ]
   }
 }
 ```
@@ -287,113 +203,7 @@ Cline stores MCP server configurations in:
 - **Connection Failures**: Verify login URL (use `https://test.salesforce.com` for sandboxes) and your sf credentials
 - **Build Errors**: Run `npm run build` to ensure the server is properly compiled
 
-## 📖 Tool Documentation
-
-### Query Tools
-
-#### execute-soql
-Execute SOQL queries with automatic bulk switching for large datasets.
-
-```typescript
-// Example: Query all accounts created today
-{
-  "query": "SELECT Id, Name, CreatedDate FROM Account WHERE CreatedDate = TODAY",
-  "tooling": false,
-  "bulkThreshold": 2000
-}
-```
-
-#### execute-sosl
-Perform multi-object searches across your Salesforce org.
-
-```typescript
-// Example: Search for contacts and leads
-{
-  "searchString": "FIND {John} IN NAME FIELDS RETURNING Contact(Id, Name), Lead(Id, Name)",
-  "searchScope": "NAME"
-}
-```
-
-### Apex Tools
-
-#### execute-apex
-Execute anonymous Apex code with debug log capture.
-
-```typescript
-// Example: Create and insert an account
-{
-  "apexCode": "Account acc = new Account(Name='Test Account'); insert acc; System.debug('Created: ' + acc.Id);",
-  "logLevel": "DEBUG"
-}
-```
-
-#### run-apex-tests
-Run Apex tests with detailed coverage reporting.
-
-```typescript
-// Example: Run specific test classes
-{
-  "testClasses": ["AccountTest", "ContactTest"],
-  "maxFailedTests": 5
-}
-```
-
-### Data Management Tools
-
-#### create-record
-Create single or multiple records with auto-bulk switching.
-
-```typescript
-// Example: Create multiple accounts
-{
-  "sobjectType": "Account",
-  "records": [
-    {"Name": "Company A", "Type": "Customer"},
-    {"Name": "Company B", "Type": "Prospect"}
-  ],
-  "allOrNone": false
-}
-```
-
-### Metadata Tools (Component-Based)
-
-#### deploy-metadata
-Deploy individual metadata components or arrays of components.
-
-```typescript
-// Example: Deploy a single ApexClass
-{
-  "components": {
-    "type": "ApexClass",
-    "fullName": "MyExampleClass",
-    "metadata": {
-      "body": "public class MyExampleClass {\n    public static void sayHello() {\n        System.debug('Hello from component deployment!');\n    }\n}"
-    }
-  },
-  "options": {
-    "checkOnly": true, // Optional: validate without saving
-    "runTests": ["MyExampleClass_Test"] // Optional: specify tests to run
-  }
-}
-```
-
-#### retrieve-metadata
-Retrieve individual metadata components or arrays of components.
-
-```typescript
-// Example: Retrieve an ApexClass component
-{
-  "components": {
-    "type": "ApexClass",
-    "fullName": "MyExistingClass"
-  },
-  "options": {
-    "includeBody": true // Optional: include source code
-  }
-}
-```
-
-## 🔐 Authentication
+##  Authentication
 
 ### Username/Password Authentication
 1. Obtain your security token from Salesforce Setup → Personal Information → Reset Security Token
