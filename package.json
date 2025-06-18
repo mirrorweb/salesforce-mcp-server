@@ -4,7 +4,7 @@
   "description": "A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools.",
   "main": "build/index.js",
   "bin": {
-    "salesforce-mcp": "./build/index.js"
+    "salesforce-mcp": "build/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jaworjar95/salesforce-mcp-server.git"
+    "url": "git+https://github.com/jaworjar95/salesforce-mcp-server.git"
   },
   "keywords": [
     "salesforce",
