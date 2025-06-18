@@ -14,6 +14,10 @@
     "type": "git",
     "url": "git+https://github.com/jaworjar95/salesforce-mcp-server.git"
   },
+  "bugs": {
+    "url": "https://github.com/jaworjar95/salesforce-mcp-server/issues"
+  },
+  "homepage": "https://github.com/jaworjar95/salesforce-mcp-server#readme",
   "keywords": [
     "salesforce",
     "mcp",
