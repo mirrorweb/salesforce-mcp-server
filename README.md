@@ -46,21 +46,6 @@ A comprehensive Model Context Protocol (MCP) server that provides seamless Sales
 
 To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add the MCP server config below.
 
-### Configuration File Locations
-<details>
-<summary>View paths for Claude Desktop and Cline</summary>
-
-| Application | OS      | Path                                                                                             |
-|-------------|---------|--------------------------------------------------------------------------------------------------|
-| Claude Desktop| Windows | `%APPDATA%\Claude\claude_desktop_config.json`                                                    |
-|             | macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json`                                |
-| Cline (VS Code)| Windows | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`      |
-|             | macOS   | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
-|             | Linux   | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`     |
-
-</details>
-
----
 
 ### On macOS / Linux systems:
 
@@ -204,6 +189,34 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
 ```
 </details>
 
+### Configuration File Locations
+
+<details>
+<summary>Claude Desktop</summary>
+
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+</details>
+
+<details>
+<summary>Cline (VS Code)</summary>
+
+- **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+- **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+
+</details>
+
+<details>
+<summary>Cursor</summary>
+
+- **Windows**: `%USERPROFILE%\.cursor\mcp.json`
+- **macOS**: `~/.cursor/mcp.json`
+- **Linux**: `~/.cursor/mcp.json`
+
+</details>
+
 #### Tool Safety Levels
 
 **✅ Safe for Auto-Approval (`alwaysAllow`)**
@@ -221,21 +234,6 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
 - `execute-sosl` - Search operations (can be resource-intensive)
 - `retrieve-metadata` - Metadata retrieval (can be large)
 
-#### Usage in Cline
-
-1. Install the Cline VS Code extension
-2. Configure the MCP server as shown above
-3. Restart VS Code
-4. Open Cline and start using Salesforce tools in your conversations
-
-#### Troubleshooting Cline Integration
-
-**Common Issues:**
-- **Server Not Responding**: Check if Node.js is installed and the build directory exists
-- **Permission Errors**: Verify Salesforce credentials in environment variables
-- **Tool Not Available**: Ensure the server is enabled and not disabled in Cline settings
-- **Connection Failures**: Verify login URL (use `https://test.salesforce.com` for sandboxes) and your sf credentials
-- **Build Errors**: Run `npm run build` to ensure the server is properly compiled
 
 ## Authentication
 
@@ -275,16 +273,6 @@ node tests/test-apex-tools.js
 node tests/test-metadata-tools.js
 ```
 
-### Test Structure
-
-The test files are organized by functionality:
-
-- **test-query-tools.js**: Tests basic connection and query tools (test-connection, execute-soql, execute-sosl, describe-sobject)
-- **test-data-tools.js**: Tests data management tools (create-record, get-record, update-record, delete-record, upsert-record)
-- **test-apex-tools.js**: Tests Apex development tools (execute-apex, run-apex-tests, get-apex-logs)
-- **test-metadata-tools.js**: Tests metadata tools (list-metadata-types, deploy-metadata, retrieve-metadata)
-
-Each test file creates its own server instance, sends requests to test specific tools, and validates the responses.
 
 ## 🤝 Contributing
 
