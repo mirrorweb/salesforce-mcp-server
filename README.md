@@ -64,7 +64,7 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
       "env": {
         "SF_USERNAME": "your-username@company.com",
         "SF_PASSWORD": "your-password",
-        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_SECURITY_TOKEN": "",
         "SF_LOGIN_URL": "https://login.salesforce.com"
       },
       "disabled": false,
@@ -136,7 +136,7 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
       "env": {
         "SF_USERNAME": "your-username@company.com",
         "SF_PASSWORD": "your-password",
-        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_SECURITY_TOKEN": "",
         "SF_LOGIN_URL": "https://login.salesforce.com"
       },
       "disabled": false,
@@ -206,6 +206,8 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
 - **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 - **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 
+> **⚠️ Important**: After adding or modifying the MCP server configuration, you must restart VS Code for the changes to take effect.
+
 </details>
 
 <details>
@@ -238,9 +240,11 @@ To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add t
 ## Authentication
 
 ### Username/Password Authentication
-1. Obtain your security token from Salesforce Setup → Personal Information → Reset Security Token
+1. Obtain your security token from Salesforce Setup → Personal Information → Reset Security Token (only required if your IP is not trusted)
 2. Set environment variables as shown in the configuration section
 3. Use `https://login.salesforce.com` for production or `https://test.salesforce.com` for sandboxes
+
+> **💡 Security Token**: Only add the security token if Salesforce requires it for your connection. If not leave `SF_SECURITY_TOKEN` empty.
 
 ### OAuth2 Authentication
 1. Create a Connected App in Salesforce Setup
