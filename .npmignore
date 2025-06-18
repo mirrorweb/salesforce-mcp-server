@@ -1,0 +1,11 @@
+# Ignore directories
+.vscode/
+node_modules/
+src/
+tests/
+
+# Ignore files
+.env
+.env.example
+.gitignore
+tsconfig.json

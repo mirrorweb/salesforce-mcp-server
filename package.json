@@ -1,8 +1,35 @@
 {
+  "name": "@jjar/salesforce-mcp-server",
+  "version": "1.0.0",
+  "description": "A comprehensive Model Context Protocol (MCP) server that provides seamless Salesforce integration for AI development tools.",
+  "main": "build/index.js",
+  "bin": {
+    "salesforce-mcp": "./build/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaworjar95/salesforce-mcp-server.git"
+  },
+  "keywords": [
+    "salesforce",
+    "mcp",
+    "ai",
+    "cli",
+    "api",
+    "agents",
+    "cline",
+    "cursor"
+  ],
+  "author": "Jarosław Jaworski <jaroslawjaworski@jawjar.biz>",
+  "license": "MIT",
+  "files": [
+    "build",
+    "README.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "archiver": "^7.0.1",

@@ -72,24 +72,11 @@ The `deploy-metadata` tool supports the following metadata types:
 Before you begin, ensure you have the following installed:
 
 -   Node.js (version 18 or higher recommended)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/jaworjar95/salesforce-mcp-server.git
-cd salesforce-mcp-server
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-```
+-   An MCP-compatible client like [Cline](https://github.com/saoudrizwan/claude-dev) or [Claude Desktop](https://claude.ai/desktop)
 
 ### Environment Setup
 
-Create a `.env` file with your Salesforce credentials:
+You will provide your Salesforce credentials as environment variables within your MCP client's configuration.
 
 ```bash
 # Option 1: Username/Password Authentication (Recommended for development)
@@ -110,7 +97,7 @@ SF_API_VERSION=64.0
 
 ## 🔧 MCP Client Configuration
 
-To use this server with an MCP client like Cline or Claude Desktop, add the following configuration to your client's settings file.
+To use this server with an MCP client like Cline or Claude Desktop, add the following configuration to your client's settings file. The `command` should use `npx` to run the package directly from the npm registry.
 
 ### Configuration Examples
 
@@ -121,8 +108,8 @@ Choose one of the following authentication methods and add the corresponding JSO
 ```json
 {
   "salesforce": {
-    "command": "node",
-    "args": ["/path/to/your/salesforce-mcp-server/build/index.js"],
+    "command": "npx",
+    "args": ["-y", "@jjar/salesforce-mcp-server"],
     "env": {
       "SF_USERNAME": "your-username@company.com",
       "SF_PASSWORD": "your-password",
@@ -148,8 +135,8 @@ Choose one of the following authentication methods and add the corresponding JSO
 ```json
 {
   "salesforce": {
-    "command": "node",
-    "args": ["/path/to/your/salesforce-mcp-server/build/index.js"],
+    "command": "npx",
+    "args": ["-y", "@jjar/salesforce-mcp-server"],
     "env": {
       "SF_CLIENT_ID": "your-oauth2-client-id",
       "SF_CLIENT_SECRET": "your-oauth2-client-secret",
