@@ -33,29 +33,6 @@ A comprehensive Model Context Protocol (MCP) server that provides seamless Sales
 #### 🔗 Connection Tools
 - **`test-connection`** - Connection validation and health monitoring
 
-### Supported Metadata Types
-
-The `deploy-metadata` tool supports the following metadata types:
-
--   `ApexClass`
--   `ApexTrigger`
--   `ApexComponent`
--   `ApexPage`
--   `CustomObject`
--   `CustomField`
--   `ValidationRule`
--   `WorkflowRule`
--   `Flow`
--   `CustomLabel`
--   `CustomTab`
--   `CustomApplication`
--   `PermissionSet`
--   `PermissionSetGroup`
--   `CustomMetadata`
--   `EmailTemplate`
--   `Layout`
--   `FlexiPage`
-
 ### Key Capabilities
 
 - **🔄 Auto-Bulk Switching** - Intelligent API selection for optimal performance
@@ -65,97 +42,167 @@ The `deploy-metadata` tool supports the following metadata types:
 - **📝 Comprehensive Logging** - Detailed debugging and monitoring
 - **🔍 Raw Error Exposure** - Preserve exact Salesforce errors for debugging
 
-## 🚀 Quick Start
+## 🚀 Installation
 
-### Prerequisites
+To use with Desktop APP, such as Claude Desktop, Cline, Cursor, and so on, add the MCP server config below.
 
-Before you begin, ensure you have the following installed:
+### Configuration File Locations
+<details>
+<summary>View paths for Claude Desktop and Cline</summary>
 
--   Node.js (version 18 or higher recommended)
--   An MCP-compatible client like [Cline](https://github.com/saoudrizwan/claude-dev) or [Claude Desktop](https://claude.ai/desktop)
+| Application | OS      | Path                                                                                             |
+|-------------|---------|--------------------------------------------------------------------------------------------------|
+| Claude Desktop| Windows | `%APPDATA%\Claude\claude_desktop_config.json`                                                    |
+|             | macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json`                                |
+| Cline (VS Code)| Windows | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`      |
+|             | macOS   | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
+|             | Linux   | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`     |
 
-### Environment Setup
+</details>
 
-You will provide your Salesforce credentials as environment variables within your MCP client's configuration.
+---
 
-```bash
-# Option 1: Username/Password Authentication (Recommended for development)
-SF_USERNAME=your-username@company.com
-SF_PASSWORD=your-password
-SF_SECURITY_TOKEN=your-security-token
-SF_LOGIN_URL=https://login.salesforce.com
+### On macOS / Linux systems:
 
-# Option 2: OAuth2 Authentication (Recommended for production)
-SF_CLIENT_ID=your-oauth2-client-id
-SF_CLIENT_SECRET=your-oauth2-client-secret
-SF_REFRESH_TOKEN=your-refresh-token
-SF_INSTANCE_URL=https://yourorg.my.salesforce.com
-
-# Optional Configuration
-SF_API_VERSION=64.0
-```
-
-## 🔧 MCP Client Configuration
-
-To use this server with an MCP client like Cline or Claude Desktop, add the following configuration to your client's settings file. The `command` should use `npx` to run the package directly from the npm registry.
-
-### Configuration Examples
-
-Choose one of the following authentication methods and add the corresponding JSON object to the `mcpServers` section of your settings file.
-
-**1. Username/Password Authentication**
+<details>
+<summary><strong>Username/Password Authentication</strong></summary>
 
 ```json
 {
-  "salesforce": {
-    "command": "npx",
-    "args": ["-y", "@jjar/salesforce-mcp-server"],
-    "env": {
-      "SF_USERNAME": "your-username@company.com",
-      "SF_PASSWORD": "your-password",
-      "SF_SECURITY_TOKEN": "your-security-token",
-      "SF_LOGIN_URL": "https://login.salesforce.com",
-      "SF_API_VERSION": "64.0"
-    },
-    "disabled": false,
-    "alwaysAllow": [
-      "test-connection",
-      "execute-soql",
-      "describe-sobject",
-      "get-record",
-      "get-apex-logs",
-      "list-metadata-types"
-    ]
+  "mcp.servers": {
+    "salesforce": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@jjar/salesforce-mcp-server"
+      ],
+      "env": {
+        "SF_USERNAME": "your-username@company.com",
+        "SF_PASSWORD": "your-password",
+        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_LOGIN_URL": "https://login.salesforce.com"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ]
+    }
   }
 }
 ```
+</details>
 
-**2. OAuth 2.0 Authentication**
+<details>
+<summary><strong>OAuth 2.0 Authentication</strong></summary>
 
 ```json
 {
-  "salesforce": {
-    "command": "npx",
-    "args": ["-y", "@jjar/salesforce-mcp-server"],
-    "env": {
-      "SF_CLIENT_ID": "your-oauth2-client-id",
-      "SF_CLIENT_SECRET": "your-oauth2-client-secret",
-      "SF_REFRESH_TOKEN": "your-refresh-token",
-      "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com",
-      "SF_API_VERSION": "64.0"
-    },
-    "disabled": false,
-    "alwaysAllow": [
-      "test-connection",
-      "execute-soql",
-      "describe-sobject",
-      "get-record",
-      "get-apex-logs",
-      "list-metadata-types"
-    ]
+  "mcp.servers": {
+    "salesforce": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@jjar/salesforce-mcp-server"
+      ],
+      "env": {
+        "SF_CLIENT_ID": "your-oauth2-client-id",
+        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
+        "SF_REFRESH_TOKEN": "your-refresh-token",
+        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ]
+    }
   }
 }
 ```
+</details>
+
+---
+
+### On Windows systems:
+
+<details>
+<summary><strong>Username/Password Authentication</strong></summary>
+
+```json
+{
+  "mcp.servers": {
+    "salesforce": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@jjar/salesforce-mcp-server"
+      ],
+      "env": {
+        "SF_USERNAME": "your-username@company.com",
+        "SF_PASSWORD": "your-password",
+        "SF_SECURITY_TOKEN": "your-security-token",
+        "SF_LOGIN_URL": "https://login.salesforce.com"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>OAuth 2.0 Authentication</strong></summary>
+
+```json
+{
+  "mcp.servers": {
+    "salesforce": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@jjar/salesforce-mcp-server"
+      ],
+      "env": {
+        "SF_CLIENT_ID": "your-oauth2-client-id",
+        "SF_CLIENT_SECRET": "your-oauth2-client-secret",
+        "SF_REFRESH_TOKEN": "your-refresh-token",
+        "SF_INSTANCE_URL": "https://yourorg.my.salesforce.com"
+      },
+      "disabled": false,
+      "alwaysAllow": [
+        "test-connection",
+        "execute-soql",
+        "describe-sobject",
+        "get-record",
+        "get-apex-logs",
+        "list-metadata-types"
+      ]
+    }
+  }
+}
+```
+</details>
 
 #### Tool Safety Levels
 
@@ -190,7 +237,7 @@ Choose one of the following authentication methods and add the corresponding JSO
 - **Connection Failures**: Verify login URL (use `https://test.salesforce.com` for sandboxes) and your sf credentials
 - **Build Errors**: Run `npm run build` to ensure the server is properly compiled
 
-##  Authentication
+## Authentication
 
 ### Username/Password Authentication
 1. Obtain your security token from Salesforce Setup → Personal Information → Reset Security Token
