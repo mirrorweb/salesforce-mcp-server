@@ -24,6 +24,7 @@ import { MetadataTools } from "./tools/metadataTools.js";
 
 /**
  * Create the Salesforce MCP server with comprehensive Salesforce capabilities
+ * Requires OAuth2 authentication for secure per-user access
  */
 const server = new Server(
   {
@@ -39,13 +40,14 @@ const server = new Server(
 
 /**
  * Handler that lists available tools
+ * All tools require OAuth2 authentication (SF_CLIENT_ID, SF_REFRESH_TOKEN, SF_INSTANCE_URL)
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
         name: "test-connection",
-        description: "Test Salesforce connection and return organization info",
+        description: "Test Salesforce OAuth2 connection and return organization info. Requires OAuth2 authentication with SF_CLIENT_ID, SF_REFRESH_TOKEN, and SF_INSTANCE_URL environment variables.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -54,7 +56,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "execute-soql",
-        description: "Execute SOQL query with auto-bulk switching for large result sets",
+        description: "Execute SOQL query with auto-bulk switching for large result sets. Requires OAuth2 authentication.",
         inputSchema: {
           type: "object",
           properties: {
@@ -633,8 +635,9 @@ async function main() {
     // Connect server
     await server.connect(transport);
     
-    console.error('[Salesforce MCP Server] Server started successfully');
+    console.error('[Salesforce MCP Server] Server started successfully with OAuth2 authentication');
     console.error('[Salesforce MCP Server] Available tools: test-connection, execute-soql, execute-sosl, describe-sobject, execute-apex, run-apex-tests, get-apex-logs, create-record, get-record, update-record, delete-record, upsert-record, deploy-metadata, retrieve-metadata, list-metadata-types');
+    console.error('[Salesforce MCP Server] All tools require OAuth2 authentication (SF_CLIENT_ID, SF_REFRESH_TOKEN, SF_INSTANCE_URL)');
     
   } catch (error) {
     console.error('[Salesforce MCP Server] Failed to start server:', error);

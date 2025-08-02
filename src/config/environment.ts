@@ -4,17 +4,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export interface SalesforceConfig {
-  // OAuth2 Configuration
+  // OAuth2 Configuration (Required)
   clientId?: string;
   clientSecret?: string;
   refreshToken?: string;
   instanceUrl?: string;
-  
-  // Username/Password Configuration
-  username?: string;
-  password?: string;
-  securityToken?: string;
-  loginUrl?: string;
   
   // Optional Configuration
   apiVersion?: string;
@@ -33,12 +27,6 @@ export const config: SalesforceConfig = {
   refreshToken: process.env.SF_REFRESH_TOKEN,
   instanceUrl: process.env.SF_INSTANCE_URL,
   
-  // Username/Password Configuration
-  username: process.env.SF_USERNAME,
-  password: process.env.SF_PASSWORD,
-  securityToken: process.env.SF_SECURITY_TOKEN,
-  loginUrl: process.env.SF_LOGIN_URL || 'https://login.salesforce.com',
-  
   // Optional Configuration
   apiVersion: process.env.SF_API_VERSION || '59.0',
   timeout: parseInt(process.env.SF_TIMEOUT || '120000'),
@@ -50,16 +38,36 @@ export const config: SalesforceConfig = {
 };
 
 export function validateConfig(): void {
-  const hasOAuth2 = config.clientId && config.refreshToken;
-  const hasUsernamePassword = config.username && config.password;
+  // Check for deprecated username/password environment variables
+  const deprecatedVars = ['SF_USERNAME', 'SF_PASSWORD', 'SF_SECURITY_TOKEN', 'SF_LOGIN_URL'];
+  const foundDeprecatedVars = deprecatedVars.filter(varName => process.env[varName]);
   
-  if (!hasOAuth2 && !hasUsernamePassword) {
+  if (foundDeprecatedVars.length > 0) {
     throw new Error(
-      'No valid Salesforce authentication configuration found. ' +
-      'Please provide either OAuth2 credentials (SF_CLIENT_ID, SF_REFRESH_TOKEN) ' +
-      'or username/password credentials (SF_USERNAME, SF_PASSWORD)'
+      `Username/password authentication is deprecated for security reasons. ` +
+      `Found deprecated environment variables: ${foundDeprecatedVars.join(', ')}. ` +
+      `Please use OAuth2 authentication instead with SF_CLIENT_ID, SF_CLIENT_SECRET, SF_REFRESH_TOKEN, and SF_INSTANCE_URL. ` +
+      `See README.md for setup instructions.`
     );
   }
   
-  console.error('[Config] Authentication method available:', hasOAuth2 ? 'OAuth2' : 'Username/Password');
+  // Validate required OAuth2 configuration
+  const hasOAuth2 = config.clientId && config.refreshToken && config.instanceUrl;
+  
+  if (!hasOAuth2) {
+    const missingVars = [];
+    if (!config.clientId) missingVars.push('SF_CLIENT_ID');
+    if (!config.refreshToken) missingVars.push('SF_REFRESH_TOKEN');
+    if (!config.instanceUrl) missingVars.push('SF_INSTANCE_URL');
+    
+    throw new Error(
+      `OAuth2 authentication configuration incomplete. ` +
+      `Missing required environment variables: ${missingVars.join(', ')}. ` +
+      `See README.md for setup instructions.`
+    );
+  }
+  
+  console.error('[Config] OAuth2 authentication configured successfully');
+  console.error('[Config] Instance URL:', config.instanceUrl);
+  console.error('[Config] API Version:', config.apiVersion);
 }

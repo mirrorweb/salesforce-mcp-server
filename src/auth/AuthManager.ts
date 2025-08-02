@@ -1,44 +1,32 @@
 import { Connection } from 'jsforce';
 import { AuthStrategy, createAuthenticationError } from './types.js';
 import { OAuth2Strategy } from './OAuth2Strategy.js';
-import { UsernamePasswordStrategy } from './UsernamePasswordStrategy.js';
 
 export class AuthManager {
-  private strategies: AuthStrategy[] = [
-    new OAuth2Strategy(),
-    new UsernamePasswordStrategy()
-  ];
+  private strategy: AuthStrategy = new OAuth2Strategy();
 
   async authenticate(): Promise<Connection> {
-    console.error('[AuthManager] Starting authentication process...');
+    console.error('[AuthManager] Starting OAuth2 authentication...');
     
-    // Try each strategy in priority order
-    for (const strategy of this.strategies) {
-      if (strategy.canAuthenticate()) {
-        console.error(`[AuthManager] Attempting authentication with ${strategy.getName()}`);
-        try {
-          const connection = await strategy.authenticate();
-          console.error(`[AuthManager] Successfully authenticated with ${strategy.getName()}`);
-          return connection;
-        } catch (error) {
-          console.error(`[AuthManager] ${strategy.getName()} authentication failed:`, error);
-          // Continue to next strategy
-        }
-      } else {
-        console.error(`[AuthManager] ${strategy.getName()} strategy not available (missing credentials)`);
-      }
+    if (!this.strategy.canAuthenticate()) {
+      throw createAuthenticationError(
+        'OAuth2 authentication not configured. Please ensure SF_CLIENT_ID, SF_REFRESH_TOKEN, and SF_INSTANCE_URL environment variables are set. See README.md for setup instructions.',
+        'AuthManager'
+      );
     }
-    
-    // If we get here, all strategies failed
-    throw createAuthenticationError(
-      'All authentication strategies failed. Please check your Salesforce credentials.',
-      'AuthManager'
-    );
+
+    try {
+      console.error(`[AuthManager] Attempting authentication with ${this.strategy.getName()}`);
+      const connection = await this.strategy.authenticate();
+      console.error(`[AuthManager] Successfully authenticated with ${this.strategy.getName()}`);
+      return connection;
+    } catch (error) {
+      console.error(`[AuthManager] ${this.strategy.getName()} authentication failed:`, error);
+      throw error; // Re-throw the detailed error from OAuth2Strategy
+    }
   }
 
   getAvailableStrategies(): string[] {
-    return this.strategies
-      .filter(strategy => strategy.canAuthenticate())
-      .map(strategy => strategy.getName());
+    return this.strategy.canAuthenticate() ? [this.strategy.getName()] : [];
   }
 }
